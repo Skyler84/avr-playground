@@ -14,10 +14,9 @@ ${DIR}_MOD_OBJS := ${SRCS:%.c=${BLD_DIR}/${DIR}/%.mod.o}
 ${DIR}/${TARGET}_LOAD_ADDR := ${LOAD_ADDR}
 
 DIR_FROM_MOD_OBJ = ${patsubst %,%/$*.mod.o,%$@}
-all::                ${BLD_DIR}/${DIR}/all
-${DIR}/::            ${BLD_DIR}/${DIR}/all
-${DIR}/all::         ${BLD_DIR}/${DIR}/all
-${BLD_DIR}/${DIR}/:: ${BLD_DIR}/${DIR}/all
+
+include ${MAKEDIR}/internal/targets.mk
+
 ${BLD_DIR}/${DIR}/all:: ${patsubst %,${BLD_DIR}/${DIR}/${TARGET}.mod.%, elf hex bin}
 
 ${BLD_DIR}/${DIR}/${TARGET}.mod.bin : ${BLD_DIR}/%.mod.bin : ${BLD_DIR}/${DIR}/${TARGET}.mod.elf
@@ -34,8 +33,6 @@ ${${DIR}_MOD_OBJS} : ${BLD_DIR}/${DIR}/%.mod.o : ${DIR}/%.c
 	mkdir -p ${@D}
 	${CC} ${CFLAGS} ${${DIR_FROM_MOD_OBJ}_CFLAGS}  -c $< -o $@
 
-clean:: ${DIR}/clean
-${DIR}/clean:: ${BLD_DIR}/${DIR}/clean
 ${BLD_DIR}/${DIR}/clean::
 	rm -f ${${patsubst ${BLD_DIR}/%/clean,%,$@}_MOD_DISCARDS}
 

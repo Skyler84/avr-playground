@@ -30,7 +30,8 @@ inline static uintptr_t GET_MODULE_FN_PTR_OFFSET()
     : "=r" (rel)
     ::);
     extern void test_label();
-    return rel - (uintptr_t)&test_label;
+    constexpr uintptr_t _test_label = &test_label;
+    return rel - _test_label;
     #else
     uintptr_t rel;
     asm volatile( 

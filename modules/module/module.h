@@ -18,7 +18,7 @@ typedef struct{
 } module_fn;
 
 #define REGISTER_MODULE(name, fns, ver)\
-const module_fn module_fns[] __attribute__((section(".module_begin"))) = {\
+const module_fn module_fns[] __attribute__((section(".module_begin"), used)) = {\
     fns(ENUM_FN_ENTRY)\
     {0xffff, (void*)ver},\
     {0,0}\

@@ -18,7 +18,7 @@ ifndef F_CPU
 ${error "Missing F_CPU definition. Define BOARD or specify F_CPU manually on the command line."}
 endif
 
-CFLAGS := -mmcu=${MCU} -DF_CPU=${F_CPU}
-LDFLAGS := -mmcu=${MCU}
+CFLAGS := -mmcu=${MCU} -DF_CPU=${F_CPU} -O3
+LDFLAGS := -mmcu=${MCU} -O3
 
 include ${patsubst %,%/Makefile,${SUBDIRS}}

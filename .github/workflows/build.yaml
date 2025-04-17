@@ -5,4 +5,16 @@ on:
   pull_request:
 
 jobs:
-  
+  build:
+    runs-on: ubuntu
+    steps:
+      - name: install build toolchain
+        uses: daaku/gc-action-apt-install@v4
+        with:
+          packages: make gcc-avr avr-libc
+      - name: checkout repo
+        uses: actions/checkout@v2
+      - name: build
+        run:
+          make BOARD=lafortuna BLD_DIR=build_lafortuna all
+          

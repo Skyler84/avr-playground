@@ -8,17 +8,30 @@
 "    pop %B" #id "\n" \
 "    pop %A" #id "\n" \
 
-#define ASM_PUSH_PC_LABEL_ADDR(label) 
+#define ASM_PUSH_PC_LABEL_ADDR(label) \
 "      rcall " #label "  \n" /*push PC onto stack*/ \
 #label ": \n"                                       \
 
 #define MODULE_ADJUST_DATA_PTR(ptr) \
-    (typeof(ptr))((uintptr_t)(ptr) + GET_MODULE_DATA_PTR_OFFSET())
+    (void*)((uintptr_t)(ptr) + GET_MODULE_DATA_PTR_OFFSET())
 #define MODULE_ADJUST_FN_PTR(ptr) \
-    (typeof(ptr))((uintptr_t)(ptr) + GET_MODULE_FN_PTR_OFFSET())
+    (void*)((uintptr_t)(ptr) + GET_MODULE_FN_PTR_OFFSET())
+
 
 inline static uintptr_t GET_MODULE_FN_PTR_OFFSET() 
 {
+    #if 0
+    uintptr_t rel;
+    asm volatile( 
+    ASM_PUSH_PC_LABEL_ADDR(test_label)  
+    ASM_POP_RETURN_ADDR(0)       
+    // "      subi %A0, pm_lo8(test_label)\n"
+    // "      sbci %B0, pm_hi8(test_label)\n"
+    : "=r" (rel)
+    ::);
+    extern void test_label();
+    return rel - (uintptr_t)&test_label;
+    #else
     uintptr_t rel;
     asm volatile( 
     ASM_PUSH_PC_LABEL_ADDR(L_%=)  
@@ -28,6 +41,7 @@ inline static uintptr_t GET_MODULE_FN_PTR_OFFSET()
     : "=r" (rel)
     ::);
     return rel;
+    #endif
 }
 
 inline static uintptr_t GET_MODULE_DATA_PTR_OFFSET() 

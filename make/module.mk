@@ -13,7 +13,8 @@ ${DIR}_MOD_CSRC := ${SRCS:%.c=${DIR}/%.c}
 ${DIR}_MOD_OBJS := ${SRCS:%.c=${BLD_DIR}/${DIR}/%.mod.o}
 ${DIR}/${TARGET}_LOAD_ADDR := ${LOAD_ADDR}
 
-DIR_FROM_MOD_OBJ = ${patsubst %,%/$*.mod.o,%$@}
+DIR_FROM_MOD_OBJ = ${patsubst ${BLD_DIR}/%/$*.mod.o,%,$@}
+${DIR}_CFLAGS +=  ${CFLAGS} -I ${ROOT}/modules/module
 
 include ${MAKEDIR}/internal/targets.mk
 
@@ -31,7 +32,9 @@ ${BLD_DIR}/${DIR}/${TARGET}.mod.elf : ${BLD_DIR}/%/${TARGET}.mod.elf : ${${DIR}_
 
 ${${DIR}_MOD_OBJS} : ${BLD_DIR}/${DIR}/%.mod.o : ${DIR}/%.c
 	mkdir -p ${@D}
-	${CC} ${CFLAGS} ${${DIR_FROM_MOD_OBJ}_CFLAGS}  -c $< -o $@
+	@echo ${DIR_FROM_MOD_OBJ}_CFLAGS
+	@echo ${${DIR_FROM_MOD_OBJ}_CFLAGS}
+	${CC} ${${DIR_FROM_MOD_OBJ}_CFLAGS}  -c $< -o $@
 
 ${BLD_DIR}/${DIR}/clean::
 	rm -f ${${patsubst ${BLD_DIR}/%/clean,%,$@}_MOD_DISCARDS}

@@ -15,6 +15,7 @@ ${DIR}/${TARGET}_LOAD_ADDR := ${LOAD_ADDR}
 
 DIR_FROM_MOD_OBJ = ${patsubst ${BLD_DIR}/%/$*.mod.o,%,$@}
 ${DIR}_CFLAGS +=  ${CFLAGS} -I ${ROOT}/modules/module
+${DIR}_LDFLAGS += ${CFLAGS} -T ${ROOT}/modules/module/module.x
 
 include ${MAKEDIR}/internal/targets.mk
 

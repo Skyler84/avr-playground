@@ -8,7 +8,7 @@ jobs:
   build:
     strategy:
       matrix:
-        board: [lafortuna ilmatto]
+        board: [lafortuna, ilmatto]
     runs-on: ubuntu-latest
     steps:
       - name: install build toolchain

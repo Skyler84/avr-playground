@@ -43,6 +43,15 @@ static void NOINLINE write_data(uint8_t data) {
   
 }
 
+static uint8_t NOINLINE read_data() {
+  DATA_DDR = 0;
+  RD_LO();
+  uint8_t ret = DATA_PIN;
+  RD_HI();
+  DATA_DDR = 0xff;
+  return ret;
+}
+
 #endif
 
 inline static void write_data16(uint16_t data) {

@@ -4,7 +4,13 @@ TARGET := blinky
 MODLIBS := 
 MODULES := 
 LIBS :=
-LOAD_ADDR := 0x1e000
+
+ifeq (${MCU}, ${filter ${MCU}, atmega644p at90usb646 at90usb647})
+BOOT_START_ADDR := 0xe000
+endif
+ifeq (${MCU}, ${filter ${MCU}, atmega1284p at90usb1286 at90usb1287})
+BOOT_START_ADDR := 0x1e000
+endif
 
 OPT:=s
 # LDFLAGS +=                                        

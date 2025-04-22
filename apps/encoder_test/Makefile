@@ -5,4 +5,8 @@ MODULES :=
 MODLIBS := lcd 
 LIBS := 
 
+ifeq (${MCU}, at90usb1286)
+
 include ${MAKEDIR}/app.mk
+
+endif

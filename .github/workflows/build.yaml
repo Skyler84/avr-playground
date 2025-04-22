@@ -6,15 +6,20 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu
+    strategy:
+      matrix:
+        board: [lafortuna, ilmatto]
+    runs-on: ubuntu-latest
     steps:
+      # - name: install build toolchain
+      #   uses: daaku/gh-action-apt-install@v4
+      #   with:
+      #     packages: make gcc-avr avr-libc
       - name: install build toolchain
-        uses: daaku/gc-action-apt-install@v4
-        with:
-          packages: make gcc-avr avr-libc
+        run: sudo apt install make gcc-avr avr-libc srecord
       - name: checkout repo
         uses: actions/checkout@v2
       - name: build
         run:
-          make BOARD=lafortuna BLD_DIR=build_lafortuna all
+          make BOARD=${{matrix.board}} BLD_DIR=build_${{matrix.board}} all
           

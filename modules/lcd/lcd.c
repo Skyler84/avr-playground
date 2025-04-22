@@ -37,10 +37,19 @@ static void NOINLINE write_cmd(uint8_t cmd) {
 
 static void NOINLINE write_data(uint8_t data) {
   RS_hi();
-  WRITE(cmd);
+  WRITE(data);
   WR_lo();
   WR_hi();
   
+}
+
+static uint8_t NOINLINE read_data() {
+  DATA_DDR = 0;
+  RD_lo();
+  uint8_t ret = DATA_PIN;
+  RD_hi();
+  DATA_DDR = 0xff;
+  return ret;
 }
 
 #endif

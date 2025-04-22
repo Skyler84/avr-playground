@@ -46,5 +46,11 @@ ${DIR}/flash_boot :: ${BLD_DIR}/${DIR}/${TARGET}.boot.all.hex
 ${BLD_DIR}/${DIR}/clean :: %/clean :
 	rm -f $*/*
 
+
+
+ifeq (${BOARD}, lafortuna)
+
 include ${MAKEDIR}/app.mk
 include ${MAKEDIR}/bootloader.mk
+
+endif

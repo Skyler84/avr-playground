@@ -37,7 +37,7 @@ static void NOINLINE write_cmd(uint8_t cmd) {
 
 static void NOINLINE write_data(uint8_t data) {
   RS_hi();
-  WRITE(cmd);
+  WRITE(data);
   WR_lo();
   WR_hi();
   

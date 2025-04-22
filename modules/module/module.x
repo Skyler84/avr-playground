@@ -1,4 +1,4 @@
-/* Default linker script, for normal executables */
+/* AVR Module linker script, for normal executables */
 /* Copyright (C) 2014-2015 Free Software Foundation, Inc.
    Copying and distribution of this script, with or without modification,
    are permitted in any medium without royalty provided the copyright
@@ -86,11 +86,11 @@ SECTIONS
   /* Internal text space or external memory.  */
   .text   :
   {
-    __module_header = .;
-    SHORT(0xfeed)
-    SHORT(_etext - __module_header)
-    SHORT(0xf00d)
-    *(.module_begin*)
+    __module_start = . ;
+    LONG(0x4d4f447f)
+    KEEP(*(.module.id))
+    KEEP(*(.module.table))
+    *(.module.table)
     /* For data that needs to reside in the lower 64k of progmem.  */
      *(.progmem.gcc*)
     /* PR 13812: Placing the trampolines here gives a better chance
@@ -110,6 +110,9 @@ SECTIONS
        We don't relax jump/call instructions within these sections.  */
     *(.jumptables)
      *(.jumptables*)
+    /* For code that needs to reside in the lower 128k progmem.  */
+    *(.lowtext)
+     *(.lowtext*)
      __ctors_start = . ;
      *(.ctors)
      __ctors_end = . ;
@@ -166,12 +169,63 @@ SECTIONS
     KEEP (*(.fini0))
      _etext = . ;
   }  > text
-  /DISCARD/ : 
+  .data          :
   {
-    *(.bss .bss.*)
-    *(.data .data.*)
-    *(.vectors)
-  }
+     PROVIDE (__data_start = .) ;
+    *(.data)
+     *(.data*)
+    *(.gnu.linkonce.d*)
+    *(.rodata)  /* We need to include .rodata here if gcc is used */
+     *(.rodata*) /* with -fdata-sections.  */
+    *(.gnu.linkonce.r*)
+    . = ALIGN(2);
+     _edata = . ;
+     PROVIDE (__data_end = .) ;
+  }  > data AT> text
+  .bss  ADDR(.data) + SIZEOF (.data)   : AT (ADDR (.bss))
+  {
+     PROVIDE (__bss_start = .) ;
+    *(.bss)
+     *(.bss*)
+    *(COMMON)
+     PROVIDE (__bss_end = .) ;
+  }  > data
+   __data_load_start = LOADADDR(.data);
+   __data_load_end = __data_load_start + SIZEOF(.data);
+  /* Global data not cleared after reset.  */
+  .noinit  ADDR(.bss) + SIZEOF (.bss)  :  AT (ADDR (.noinit))
+  {
+     PROVIDE (__noinit_start = .) ;
+    *(.noinit*)
+     PROVIDE (__noinit_end = .) ;
+     _end = . ;
+     PROVIDE (__heap_start = .) ;
+  }  > data
+  .eeprom  :
+  {
+    /* See .data above...  */
+    KEEP(*(.eeprom*))
+     __eeprom_end = . ;
+  }  > eeprom
+  .fuse  :
+  {
+    KEEP(*(.fuse))
+    KEEP(*(.lfuse))
+    KEEP(*(.hfuse))
+    KEEP(*(.efuse))
+  }  > fuse
+  .lock  :
+  {
+    KEEP(*(.lock*))
+  }  > lock
+  .signature  :
+  {
+    KEEP(*(.signature*))
+  }  > signature
+  .user_signatures  :
+  {
+    KEEP(*(.user_signatures*))
+  }  > user_signatures
   /* Stabs debugging sections.  */
   .stab 0 : { *(.stab) }
   .stabstr 0 : { *(.stabstr) }

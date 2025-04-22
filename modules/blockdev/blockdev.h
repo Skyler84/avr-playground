@@ -5,8 +5,13 @@
 
 typedef uint32_t sector_addr_t;
 typedef uint8_t status_t;
-typedef status_t (*bd_read_sector_fn_t)(const void *, sector_addr_t, uint8_t*);
-typedef status_t (*bd_write_sector_fn_t)(const void *, sector_addr_t, const uint8_t*);
+typedef status_t (*bd_read_sector_fn_t)(void *, sector_addr_t, uint8_t*);
+typedef status_t (*bd_write_sector_fn_t)(void *, sector_addr_t, const uint8_t*);
+typedef uint32_t (*bd_get_sector_size_fn_t)(void *);
+typedef enum {
+    BD_ERR_OK = 0,
+    BD_ERR_INVALID = 1,
+} bd_err_t;
 
 typedef struct {
     bd_read_sector_fn_t read_sector;
@@ -20,6 +25,14 @@ typedef struct {
     uint32_t sector_count;
 } BlockDev;
 
-extern status_t bd_partition(const BlockDev *bd, BlockDev *out, uint32_t sector_start, uint32_t sector_count);
-extern status_t bd_read_sector(const BlockDev *bd, uint32_t sector, uint8_t *buf);
-extern status_t bd_write_sector(const BlockDev *bd, uint32_t sector, const uint8_t *buf);
+#define _(...)
+#define BLOCKDEV_FUNCTION_EXPORTS(modname, o) \
+    o(modname, partition, status_t, const BlockDev*, BlockDev*, uint32_t, uint32_t) \
+    _(modname, get_sector_size, uint32_t, const BlockDev*) \
+    o(modname, read_sector, status_t, const BlockDev*, uint32_t, uint8_t*) \
+    o(modname, write_sector, status_t, const BlockDev*, uint32_t, const uint8_t*)
+
+#define BLOCKDEV_API_VER 1
+#define BLOCKDEV_MODULE_ID 0x0104
+
+DECLARE_MODULE(blockdev, BLOCKDEV_MODULE_ID, BLOCKDEV_FUNCTION_EXPORTS);

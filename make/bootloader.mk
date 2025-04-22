@@ -14,7 +14,9 @@ ${DIR}_BOOT_CSRC := ${SRCS:%.c=${DIR}/%.c}
 ${DIR}_BOOT_OBJS := ${SRCS:%.c=${BLD_DIR}/${DIR}/%.boot.o}
 ${DIR}/${TARGET}_BOOT_LOAD_ADDR := ${LOAD_ADDR}
 
-DIR_FROM_BOOT_OBJ = ${patsubst %,%/$*.boot.o,%$@}
+DIR_FROM_BOOT_OBJ = ${patsubst ${BLD_DIR}/%/$*.boot.o,%,$@}
+${DIR}_BOOT_CFLAGS :=  ${CFLAGS} ${${DIR}_CFLAGS}
+${DIR}_BOOT_LDFLAGS :=  ${LDFLAGS} ${${DIR}_LDFLAGS} -Wl,-section-start=.text=${LOAD_ADDR}
 
 include ${MAKEDIR}/internal/targets.mk
 
@@ -26,13 +28,13 @@ ${BLD_DIR}/${DIR}/${TARGET}.boot.bin : ${BLD_DIR}/%.boot.bin : ${BLD_DIR}/${DIR}
 ${BLD_DIR}/${DIR}/${TARGET}.boot.hex : ${BLD_DIR}/%.boot.hex : ${BLD_DIR}/${DIR}/${TARGET}.boot.elf
 	${OBJCOPY} -O ihex $< $@
 
-${BLD_DIR}/${DIR}/${TARGET}.boot.elf : ${BLD_DIR}/%/${TARGET}.boot.elf : ${${DIR}_BOOT_OBJS}
-	${CC} ${LDFLAGS} ${$*_LDFLAGS} $^ -o $@ 
+${BLD_DIR}/${DIR}/${TARGET}.boot.elf :: ${BLD_DIR}/%/${TARGET}.boot.elf : ${${DIR}_BOOT_OBJS}
+	${CC} $^ -o $@ ${$*_BOOT_LDFLAGS}
 	${SIZE} $@
 
 ${${DIR}_BOOT_OBJS} : ${BLD_DIR}/${DIR}/%.boot.o : ${DIR}/%.c
 	mkdir -p ${@D}
-	${CC} ${CFLAGS} ${${DIR_FROM_BOOT_OBJ}_CFLAGS}  -c $< -o $@
+	${CC} ${CFLAGS} ${${DIR_FROM_BOOT_OBJ}_BOOT_CFLAGS}  -c $< -o $@
 
 ${BLD_DIR}/${DIR}/clean::
 	rm -f ${${patsubst ${BLD_DIR}/%/clean,%,$@}_BOOT_DISCARDS}

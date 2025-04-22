@@ -1,4 +1,4 @@
 DIR := modules
-SUBDIRS := lcd
+SUBDIRS := lcd fonts module sd blockdev fat vfs
 
 include ${MAKEDIR}/subdirs.mk

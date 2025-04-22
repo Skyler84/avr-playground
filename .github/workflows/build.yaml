@@ -22,4 +22,16 @@ jobs:
       - name: build
         run:
           make BOARD=${{matrix.board}} BLD_DIR=build_${{matrix.board}} all
+      - name: upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: files-${{matrix.board}}
+          path: |
+            build_${{matrix.board}}/**/*.hex
+            build_${{matrix.board}}/**/*.eep
+            build_${{matrix.board}}/**/*.bin
+            build_${{matrix.board}}/**/*.a
+            build_${{matrix.board}}/**/*.elf
+
+
           

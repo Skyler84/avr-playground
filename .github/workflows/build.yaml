@@ -16,7 +16,7 @@ jobs:
       #   with:
       #     packages: make gcc-avr avr-libc
       - name: install build toolchain
-        run: sudo apt install make gcc-avr avr-libc
+        run: sudo apt install make gcc-avr avr-libc srecord
       - name: checkout repo
         uses: actions/checkout@v2
       - name: build

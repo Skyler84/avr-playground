@@ -12,13 +12,6 @@ typedef uint16_t module_id_t;
 typedef uint16_t module_fn_id_t;
 typedef void (*fn_ptr_t)();
 
-#define REGISTER_MODULE(name, fns, ver)\
-const module_fn module_fns[] __attribute__((section(".module_begin"), used)) = {\
-    fns(ENUM_FN_ENTRY)\
-    {0xffff, (void*)ver},\
-    {0,0}\
-}
-
 #define pgm_ptr_to_fn_ptr(p) ((((uintptr_t)p)/2))
 
 typedef struct {

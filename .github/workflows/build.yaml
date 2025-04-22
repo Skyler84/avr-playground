@@ -11,10 +11,12 @@ jobs:
         board: [lafortuna, ilmatto]
     runs-on: ubuntu-latest
     steps:
+      # - name: install build toolchain
+      #   uses: daaku/gh-action-apt-install@v4
+      #   with:
+      #     packages: make gcc-avr avr-libc
       - name: install build toolchain
-        uses: daaku/gh-action-apt-install@v4
-        with:
-          packages: make gcc-avr avr-libc
+        run: sudo apt install make gcc-avr avr-libc
       - name: checkout repo
         uses: actions/checkout@v2
       - name: build

@@ -4,7 +4,7 @@ TARGET := blinky
 MODLIBS := 
 MODULES := 
 LIBS :=
-LOAD_ADDR := 0x1e000
+BOOT_START_ADDR := 0x1e000
 
 OPT:=s
 # LDFLAGS +=                                        

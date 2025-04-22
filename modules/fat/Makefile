@@ -5,10 +5,12 @@ LOAD_ADDR := 0xb000
 MODULES := blockdev module vfs sd
 LIBS :=
 MODLIBS := 
+INTERFACES := fs
 
 
 ${DIR}_INCLUDES += \
 	${patsubst %,-I${ROOT}/libs/%, 	    ${LIBS}}       \
+	${patsubst %,-I${ROOT}/interfaces/%,${INTERFACES}} \
 	${patsubst %,-I${ROOT}/modules/%, 	${MODLIBS}} \
 	${patsubst %,-I${ROOT}/modules/%, 	${MODULES}} \
 	-I${ROOT}/module

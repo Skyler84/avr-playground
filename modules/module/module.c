@@ -32,18 +32,18 @@ module_t *module_next(module_t* module) {
     if (mod->magic == AVR_MODULE_MAGIC) {
       return mod;
     }
-  } while(addr && addr < 0x10000);
+  } while(addr && addr < 0x20000);
   return NULL;
 }
 
 module_t *module_find_by_id(module_id_t id) {
-  for (uint32_t addr = 0; addr < 0x10000; addr+=2) {
-    module_t *mod = (module_t*)addr;
-    if (mod->magic == AVR_MODULE_MAGIC && mod->id == id) {
-      return mod;
+  module_t *module = NULL;
+  while (module = module_next(module)) {
+    if (module->magic == AVR_MODULE_MAGIC && module->id == id) {
+      return module;
     }
   }
   return NULL;
 }
 
-// REGISTER_MODULE(module, MODULE_ID, MODULE_FUNCTION_EXPORTS, MODULE_API_VER);
+REGISTER_MODULE(module, MODULE_MODULE_ID, MODULE_FUNCTION_EXPORTS, MODULE_API_VER);

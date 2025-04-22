@@ -1,9 +1,10 @@
-SRCS := main.c encoder.c
+SRCS := main.c encoder.c gui.c buttons.c
 DIR := bootloaders/sdboot
 TARGET := sdboot
 MODLIBS := lcd fonts module sd blockdev vfs
 MODULES := fat
 LIBS :=
+INTERFACES := fs display
 BOOT_START_ADDR := 0x1e000
 MODULE_START_ADDR := 0x1c000
 LOAD_ADDR := 0x1e000
@@ -11,8 +12,11 @@ LOAD_ADDR := 0x1e000
 OPT:=s
 # LDFLAGS +=                                        
 
+
+
 ${DIR}_INCLUDES += \
 	${patsubst %,-I${ROOT}/libs/%, 	    ${LIBS}}       \
+	${patsubst %,-I${ROOT}/interfaces/%,${INTERFACES}} \
 	${patsubst %,-I${ROOT}/modules/%, 	${MODLIBS}} \
 	${patsubst %,-I${ROOT}/modules/%, 	${MODULES}} \
 	-I${ROOT}/module

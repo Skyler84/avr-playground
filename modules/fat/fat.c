@@ -4,17 +4,6 @@ MODULE_FN_PROTOS(fat, FAT_FUNCTION_EXPORTS)
 
 #define FAT_MAX_HANDLES(fs) 4
 
-#ifdef MODULE_AS_STATIC_LIB
-// #if 0
-#include "sd.h"
-#define FAT_RDBLOCK(sector, buf) sd_rdblock(NULL, sector + fs->bd->sector_start, buf);
-#define FAT_WRBLOCK(sector, buf) sd_wrblock(NULL, sector + fs->bd->sector_start, buf);
-#else
-#define FAT_RDBLOCK(sector, buf) fs->bd->fns->read_sector(fs->bd, sector + fs->bd->sector_start, buf);
-#define FAT_WRBLOCK(sector, buf) fs->bd->fns->write_sector(fs->bd, sector + fs->bd->sector_start, buf);
-
-#endif
-
 
 static FAT_SectorCache_t* fat_cache_sector(FAT_FileSystem_t *fs, uint32_t sector) {
   for (uint8_t i = 0; i < 1; i++) {
@@ -40,11 +29,15 @@ static FAT_SectorCache_t* fat_cache_sector(FAT_FileSystem_t *fs, uint32_t sector
   cache->sector_num = sector;
   cache->usage_count = 1;
   cache->dirty = false;
-  fs->bd->fns->read_sector(fs->bd, sector + fs->bd->sector_start, cache->sector_data);
+  fs->bd->fns->read_sector(fs->bd->fn_ctx, sector + fs->bd->sector_start, cache->sector_data);
   return cache;
 }
 
 static void fat_write_sector(FAT_FileSystem_t *fs, uint32_t sector) {
+}
+
+static void fat_flush_sector(FAT_FileSystem_t *fs, uint32_t sector) {
+  
   FAT_SectorCache_t *cache = NULL;
   for (uint8_t i = 0; i < 1; i++) {
     if (fs->cache[i].sector_num == sector) {
@@ -53,23 +46,10 @@ static void fat_write_sector(FAT_FileSystem_t *fs, uint32_t sector) {
     }
   }
   if (cache == NULL) return;
-  cache->dirty = true;
-  cache->usage_count++;
-}
-
-static void fat_flush_sector(FAT_FileSystem_t *fs, uint32_t sector) {
-  FAT_SectorCache_t *cache = fat_cache_sector(fs, sector);
   if (cache->dirty) {
-    FAT_WRBLOCK(sector, cache->sector_data);
+    fs->bd->fns->write_sector(fs->bd->fn_ctx, sector, cache->sector_data);
     cache->dirty = false;
   }
-}
-
-static uint32_t fat_root_start_sector(FAT_FileSystem_t *fs) {
-  uint32_t reserved_sectors = fs->reserved_sectors;
-  uint32_t num_FATs = fs->num_FATs;
-  uint32_t sectors_per_FAT = fs->sectors_per_FAT;
-  return reserved_sectors + (num_FATs * sectors_per_FAT);
 }
 
 static uint32_t fat_data_start_sector(FAT_FileSystem_t *fs) {
@@ -79,6 +59,22 @@ static uint32_t fat_data_start_sector(FAT_FileSystem_t *fs) {
   uint32_t root_dir_start_sector = reserved_sectors + (num_FATs * sectors_per_FAT);
   uint32_t root_dir_sectors = 0; // (fs->sectors_per_cluster * 32 + fs->sectors_per_cluster - 1) / fs->sectors_per_cluster;
   return root_dir_start_sector + root_dir_sectors;
+}
+
+static uint32_t fat_root_start_sector(FAT_FileSystem_t *fs) {
+  if (fs->root_cluster == 0) {
+    return fs->reserved_sectors + (fs->num_FATs * fs->sectors_per_FAT);
+  } else {
+    return fat_data_start_sector(fs) + ((fs->root_cluster - 2) * fs->sectors_per_cluster);
+  }
+}
+
+static uint32_t fat_cluster_sector_start(FAT_FileSystem_t *fs, uint32_t cluster) {
+  if (cluster == 0) {
+    return fs->reserved_sectors + (fs->num_FATs * fs->sectors_per_FAT);
+  } else {
+    return fat_data_start_sector(fs) + ((cluster - 2) * fs->sectors_per_cluster);
+  }
 }
 
 static __attribute__((noinline)) uint32_t fat_cluster_chain_next(FAT_FileSystem_t *fs, uint32_t cluster) {
@@ -92,12 +88,18 @@ static __attribute__((noinline)) uint32_t fat_cluster_chain_next(FAT_FileSystem_
 static void fat_cluster_init(FAT_FileSystem_t *fs, Cluster_t *cluster, uint32_t cluster_no) {
   if (cluster_no == 0) {
     cluster_no = fs->root_cluster;
-    // handle root_cluster 0?
+    cluster->sector_start = fat_root_start_sector(fs);
+  } else {
+    cluster->sector_start = fat_cluster_sector_start(fs, cluster_no);
   }
   cluster->current_cluster = cluster_no;
-  cluster->sector_start = fat_data_start_sector(fs) + (cluster_no - 2) * fs->sectors_per_cluster;
-  cluster->sector_count = fs->sectors_per_cluster;
-  cluster->next_cluster = fat_cluster_chain_next(fs, cluster_no);
+  if (cluster_no == 0) {
+    cluster->next_cluster = 0x0ffffff8; // end of chain
+    cluster->sector_count = (fs->root_entries * 16 + fs->sectors_per_cluster-1)/fs->sectors_per_cluster;
+  } else {
+    cluster->sector_count = fs->sectors_per_cluster;
+    cluster->next_cluster = fat_cluster_chain_next(fs, cluster_no);
+  }
 }
 
 static void fat_cluster_chain_init(FAT_FileSystem_t *fs, ClusterChain_t *chain, uint32_t start_cluster) {
@@ -115,7 +117,6 @@ static file_descriptor_t fat_get_handle(FAT_FileSystem_t *fs) {
   }
   return -1; // no free handle
 }
-// FileInfo_t dir_entry;
 
 static fstatus_t fat_navigate_directory(FAT_FileSystem_t *fs, file_descriptor_t fd, char *dirname) 
 {
@@ -146,7 +147,7 @@ static fstatus_t fat_navigate_directory(FAT_FileSystem_t *fs, file_descriptor_t 
       }
       char diff = 0;
       const char *s1 = dirname, *s2 = dir_entry.name;
-      #define PATHSTR_END(x) (*x == 0 || *x == '/')
+      #define PATHSTR_END(x) (*x == '\0' || *x == '/')
       while (!PATHSTR_END(s1) || *s2) {
         diff |= *s1 ^ *s2;
         if (!PATHSTR_END(s1)) s1++;

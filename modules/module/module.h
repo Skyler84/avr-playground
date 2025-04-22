@@ -142,6 +142,13 @@ typedef struct modname##_fns_t{\
 #define MODULE_FN_PROTOS(modname, exports) \
   exports(modname, DECLARE_FN_PROTO)
 
-extern module_t *module_next(module_t* module);
-extern module_t *module_find_by_id(module_id_t id);
-extern fn_ptr_t module_fn_lookup(module_fn_id_t id, module_t* module);
+
+#define MODULE_FUNCTION_EXPORTS(modname, o) \
+  o(modname, fn_lookup, fn_ptr_t, module_fn_id_t, module_t*)\
+  o(modname, next, module_t*, module_t*)\
+  o(modname, find_by_id, module_t*, module_id_t)
+
+#define MODULE_API_VER 0x0001
+#define MODULE_MODULE_ID 0x0000
+
+DECLARE_MODULE(module, MODULE_MODULE_ID, MODULE_FUNCTION_EXPORTS);

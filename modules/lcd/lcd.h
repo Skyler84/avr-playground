@@ -1,23 +1,14 @@
 #pragma once
 
+#include "display.h"
 #include "module.h"
 #include "fonts.h"
 #define _(...)
 
-typedef uint16_t lcd_xcoord_t;
-typedef uint16_t lcd_ycoord_t;
-typedef uint16_t lcd_colour_t;
+typedef display_xcoord_t lcd_xcoord_t;
+typedef display_ycoord_t lcd_ycoord_t;
+typedef display_colour_t lcd_colour_t;
 
-
-/* Colour definitions RGB565 */
-#define WHITE       0xFFFF
-#define BLACK       0x0000
-#define BLUE        0x001F      
-#define GREEN       0x07E0      
-#define CYAN        0x07FF      
-#define RED         0xF800      
-#define MAGENTA     0xF81F      
-#define YELLOW      0xFFE0     
 
 #define LCDWIDTH	240
 #define LCDHEIGHT	320

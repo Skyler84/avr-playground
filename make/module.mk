@@ -20,6 +20,7 @@ ${DIR}_MOD_LDFLAGS :=  ${LDFLAGS} ${${DIR}_LDFLAGS} -T ${ROOT}/modules/module/mo
 include ${MAKEDIR}/internal/targets.mk
 
 ${BLD_DIR}/${DIR}/all:: ${patsubst %,${BLD_DIR}/${DIR}/${TARGET}.mod.%, elf hex bin}
+${BLD_DIR}/${DIR}/all:: ${BLD_DIR}/${DIR}.mod.bin
 
 ${BLD_DIR}/${DIR}/${TARGET}.mod.bin : ${BLD_DIR}/%.mod.bin : ${BLD_DIR}/${DIR}/${TARGET}.mod.elf
 	${OBJCOPY} -O binary $< $@

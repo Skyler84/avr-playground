@@ -25,7 +25,7 @@ ${DIR}_LDFLAGS += 																			\
 	-L${ROOT}/module                                \
 	-lmodule
 
-${BLD_DIR}/${DIR}/all :: ${BLD_DIR}/${DIR}/${TARGET}.all.hex
+${BLD_DIR}/${DIR}/all :: ${BLD_DIR}/${DIR}/${TARGET}.boot.all.hex
 ${BLD_DIR}/${DIR}/${TARGET}.elf :: ${patsubst %,${BLD_DIR}/modules/%/, ${MODLIBS} ${MODULES}}
 ${BLD_DIR}/${DIR}/${TARGET}.boot.elf :: ${patsubst %,${BLD_DIR}/modules/%/, ${MODLIBS} ${MODULES}}
 

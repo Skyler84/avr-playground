@@ -227,10 +227,6 @@ int8_t gui_choose_file(GUI_t *gui, FileSystem_t *fs, const char *path)
         {
             selection = line_no - 1;
         }
-        if (selection < line_start)
-        {
-            line_start--;
-        }
         if (selection > line_start + num_lines - 1)
         {
             line_start = selection - num_lines + 1;

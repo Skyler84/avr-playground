@@ -8,7 +8,7 @@ jobs:
   build:
     strategy:
       matrix:
-        board: [lafortuna, ilmatto]
+        board: [lafortuna]
     runs-on: ubuntu-latest
     steps:
       # - name: install build toolchain
@@ -23,8 +23,8 @@ jobs:
         run: |
           mkdir build_${{matrix.board}}
           cd build_${{matrix.board}}
-          cmake BOARD=${{matrix.board}} ..
-          cmake --build .
+          cmake -DBOARD=${{matrix.board}} ..
+          cmake --build . -v
       - name: upload artifacts
         uses: actions/upload-artifact@v4
         with:

@@ -23,7 +23,7 @@ jobs:
         run:
           mkdir build_${{matrix.board}}
           cd build_${{matrix.board}}
-          cmake -DBOARD=${{matrix.board}} ..
+          cmake BOARD=${{matrix.board}} ..
           cmake --build .
       - name: upload artifacts
         uses: actions/upload-artifact@v4

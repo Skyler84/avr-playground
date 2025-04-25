@@ -6,8 +6,10 @@ project(avr-playground LANGUAGES CXX C ASM)
 # set(CMAKE_C_STANDARD 11)
 # set(CMAKE_C_STANDARD_REQUIRED ON)
 # set(CMAKE_C_EXTENSIONS OFF)
+if(NOT "${BOARD}" STREQUAL "")
+    include(boards/${BOARD}.cmake)
+endif()
 
-include(boards/lafortuna.cmake)
 add_compile_options(-ggdb -g)
 add_link_options(-ggdb -g)
 

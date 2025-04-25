@@ -1,13 +1,21 @@
 #pragma once
 
+// #include "display.h"
 #include "module/module.h"
 #include "fonts/fonts.h"
 #define _(...)
+
+// typedef display_xcoord_t lcd_xcoord_t;
+// typedef display_ycoord_t lcd_ycoord_t;
+// typedef display_colour_t lcd_colour_t;
 
 typedef uint16_t lcd_xcoord_t;
 typedef uint16_t lcd_ycoord_t;
 typedef uint16_t lcd_colour_t;
 
+
+#define LCDWIDTH	240
+#define LCDHEIGHT	320
 
 /* Colour definitions RGB565 */
 #define WHITE       0xFFFF
@@ -19,8 +27,6 @@ typedef uint16_t lcd_colour_t;
 #define MAGENTA     0xF81F      
 #define YELLOW      0xFFE0     
 
-#define LCDWIDTH	240
-#define LCDHEIGHT	320
 
 typedef enum {North, West, South, East} orientation;
 

@@ -1,7 +1,7 @@
 #pragma once
 #include <stdint.h>
 
-#include "module.h"
+#include "module/module.h"
 
 typedef uint32_t sector_addr_t;
 typedef uint8_t status_t;

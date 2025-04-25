@@ -1,0 +1,19 @@
+add_module(fat)
+target_sources(fat
+    PRIVATE
+        fat.c
+)
+target_include_directories(fat
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+
+target_link_modules(fat
+    PRIVATE
+        module
+)
+target_link_libraries(fat
+    PRIVATE
+        blockdev
+        fs
+)

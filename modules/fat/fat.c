@@ -1,4 +1,4 @@
-#include "fat.h"
+#include "fat/fat.h"
 
 MODULE_FN_PROTOS(fat, FAT_FUNCTION_EXPORTS)
 

@@ -1,0 +1,20 @@
+add_module(sd)
+target_sources(sd
+    PRIVATE
+        sd.c
+)
+target_include_directories(sd
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+target_link_modules(sd
+    PRIVATE
+        module
+)
+target_link_libraries(sd
+    PRIVATE
+        blockdev
+)

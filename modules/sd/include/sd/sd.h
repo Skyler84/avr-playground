@@ -1,7 +1,7 @@
 #pragma once
 
-#include "module.h"
-#include "blockdev.h"
+#include "module/module.h"
+#include "blockdev/blockdev.h"
 
 #define _(...) 
 #define SD_FUNCTION_EXPORTS(modname, o) \

@@ -1,6 +1,6 @@
 #include "lcd.h"
 #include "ili934x.h"
-#include "pic.h"
+#include "module/pic.h"
 
 #include <stdint.h>
 #include <util/delay.h>

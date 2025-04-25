@@ -1,8 +1,8 @@
 #pragma once
 
-#include "module.h"
-#include "blockdev.h"
-#include "vfs.h"
+#include "module/module.h"
+#include "blockdev/blockdev.h"
+#include "fs/fs.h"
 
 #include <stdint.h>
 

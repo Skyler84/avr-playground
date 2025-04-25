@@ -21,7 +21,10 @@ jobs:
         uses: actions/checkout@v2
       - name: build
         run:
-          make BOARD=${{matrix.board}} BLD_DIR=build_${{matrix.board}} all
+          mkdir build_${{matrix.board}}
+          cd build_${{matrix.board}}
+          cmake -DBOARD=${{matrix.board}} ..
+          cmake --build .
       - name: upload artifacts
         uses: actions/upload-artifact@v4
         with:

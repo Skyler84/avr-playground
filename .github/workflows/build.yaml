@@ -20,7 +20,7 @@ jobs:
       - name: checkout repo
         uses: actions/checkout@v2
       - name: build
-        run:
+        run: |
           mkdir build_${{matrix.board}}
           cd build_${{matrix.board}}
           cmake BOARD=${{matrix.board}} ..

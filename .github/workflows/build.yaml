@@ -16,7 +16,12 @@ jobs:
       #   with:
       #     packages: make gcc-avr avr-libc
       - name: install build toolchain
-        run: sudo apt install make gcc-avr avr-libc srecord
+        run: sudo apt install make avr-libc srecord
+      - name: build avr-gcc from source
+        run: |
+          wget https://github.com/modm-io/avr-gcc/releases/download/v14.2.0/modm-avr-gcc.tar.bz2
+          tar xf modm-avr-gcc.tar.bz2 --directory ${{github.workspace}}/opt
+          echo "${{github.workspace}}/opt/modm-avr-gcc/bin" >> $GITHUB_PATH
       - name: checkout repo
         uses: actions/checkout@v2
       - name: build

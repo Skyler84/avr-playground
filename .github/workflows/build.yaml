@@ -22,9 +22,12 @@ jobs:
           sudo apt install make avr-libc srecord
       - name: build avr-gcc from source
         run: |
+          pushd ..
           wget https://github.com/modm-io/avr-gcc/releases/download/v14.2.0/modm-avr-gcc.tar.bz2
+          mkdir opt
           tar xf modm-avr-gcc.tar.bz2 --directory $(pwd)/opt
           echo "$(pwd)/opt/modm-avr-gcc/bin" >> $GITHUB_PATH
+          popd
       - name: checkout repo
         uses: actions/checkout@v2
       - name: build

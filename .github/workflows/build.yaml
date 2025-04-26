@@ -19,15 +19,20 @@ jobs:
         run: |
           echo 'set man-db/auto-update false' | sudo debconf-communicate >/dev/null
           sudo dpkg-reconfigure man-db
-          sudo apt install make avr-libc srecord
-      - name: build avr-gcc from source
+          sudo apt install --no-install-recommends make avr-libc srecord
+      
+      - name: cache prebuilt avr-gcc
+        uses: actions/cache@v4
+        with: 
+      - name: install prebuilt avr-gcc
         run: |
-          pushd ..
+          # pushd ..
           wget https://github.com/modm-io/avr-gcc/releases/download/v14.2.0/modm-avr-gcc.tar.bz2
           mkdir opt
           tar xf modm-avr-gcc.tar.bz2 --directory $(pwd)/opt
-          echo "$(pwd)/opt/modm-avr-gcc/bin" >> $GITHUB_PATH
-          popd
+          sudo cp -r $(pwd)/opt/modm-avr-gcc/* /usr/
+          # echo "$(pwd)/opt/modm-avr-gcc/bin" >> $GITHUB_PATH
+          # popd
       - name: checkout repo
         uses: actions/checkout@v2
       - name: build

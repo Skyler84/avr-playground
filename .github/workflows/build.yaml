@@ -35,7 +35,8 @@ jobs:
           tar xf modm-avr-gcc.tar.bz2 --directory ${{github.workspace}}/opt
       - name: enable prebuilt avr-gcc
         run: |
-          sudo cp -r ${{github.workspace}}/opt/modm-avr-gcc/* /usr/
+          # sudo cp -r ${{github.workspace}}/opt/modm-avr-gcc/* /usr/
+          echo "${{github.workspace}}/opt/avr-gcc/bin" >> $GITHUB_PATH
       - name: checkout repo
         uses: actions/checkout@v2
       - name: build

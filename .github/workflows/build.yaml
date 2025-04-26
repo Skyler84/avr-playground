@@ -20,8 +20,8 @@ jobs:
       - name: build avr-gcc from source
         run: |
           wget https://github.com/modm-io/avr-gcc/releases/download/v14.2.0/modm-avr-gcc.tar.bz2
-          tar xf modm-avr-gcc.tar.bz2 --directory ${{github.workspace}}/opt
-          echo "${{github.workspace}}/opt/modm-avr-gcc/bin" >> $GITHUB_PATH
+          tar xf modm-avr-gcc.tar.bz2 --directory $(pwd)/opt
+          echo "$(pwd)/opt/modm-avr-gcc/bin" >> $GITHUB_PATH
       - name: checkout repo
         uses: actions/checkout@v2
       - name: build

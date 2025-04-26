@@ -25,7 +25,7 @@ jobs:
         id: cache-compiler
         uses: actions/cache@v4
         with: 
-          path: ${{github.workspace}}/opt/modm-avr-gcc
+          path: ${{github.workspace}}/opt/avr-gcc
           key: ${{ runner.os }}-avr-gcc
       - name: download prebuilt avr-gcc
         if: steps.cache-compiler.outputs.cache-hit != 'true'

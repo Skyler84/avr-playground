@@ -25,26 +25,36 @@ jobs:
         id: cache-compiler
         uses: actions/cache@v4
         with: 
-          path: ${{github.workspace}}/opt/modm-avr-gcc
+          path: ${{github.workspace}}/gcc
           key: ${{ runner.os }}-avr-gcc
-      - name: download prebuilt avr-gcc
+      - name: clone and build avr-gcc
         if: steps.cache-compiler.outputs.cache-hit != 'true'
         run: | 
-          wget https://github.com/modm-io/avr-gcc/releases/download/v14.2.0/modm-avr-gcc.tar.bz2
-          mkdir opt
-          tar xf modm-avr-gcc.tar.bz2 --directory ${{github.workspace}}/opt
-      - name: enable prebuilt avr-gcc
+          git clone https://github.com/gcc-mirror/gcc.git ${{github.workspace}}/gcc
+          pushd ${{github.workspace}}/gcc
+          git checkout releases/gcc-14.2.0
+          mkdir build
+          cd build
+          ../configure --prefix=/usr --target=avr --enable-languages=c,c++ --disable-nls --disable-libssp --with-dwarf2
+          make -j$(nproc)
+          popd
+
+          
+      - name: enable avr-gcc
         run: |
-          sudo cp -r ${{github.workspace}}/opt/avr-gcc/* /usr/
+          pushd ${{github.workspace}}/gcc/build
+          sudo make install
+          # sudo cp -r ${{github.workspace}}/opt/avr-gcc/* /usr/
           # echo "${{github.workspace}}/opt/avr-gcc/bin" >> $GITHUB_PATH
+          popd
       - name: checkout repo
         uses: actions/checkout@v2
-      - name: build
-        run: |
-          mkdir build_${{matrix.board}}
-          cd build_${{matrix.board}}
-          cmake -DBOARD=${{matrix.board}} ..
-          cmake --build . -v
+      # - name: build
+      #   run: |
+      #     mkdir build_${{matrix.board}}
+      #     cd build_${{matrix.board}}
+      #     cmake -DBOARD=${{matrix.board}} ..
+      #     cmake --build . -v
       - name: upload artifacts
         uses: actions/upload-artifact@v4
         with:

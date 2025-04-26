@@ -22,17 +22,20 @@ jobs:
           sudo apt install --no-install-recommends make avr-libc srecord
       
       - name: cache prebuilt avr-gcc
+        id: cache-compiler
         uses: actions/cache@v4
         with: 
-      - name: install prebuilt avr-gcc
-        run: |
-          # pushd ..
+          path: ${{github.workspace}}/opt/modm-avr-gcc
+          key: ${{ runner.os }}-avr-gcc
+      - name: download prebuilt avr-gcc
+        if: steps.cache-compiler.outputs.cache-hit != 'true'
+        run: | 
           wget https://github.com/modm-io/avr-gcc/releases/download/v14.2.0/modm-avr-gcc.tar.bz2
           mkdir opt
-          tar xf modm-avr-gcc.tar.bz2 --directory $(pwd)/opt
-          sudo cp -r $(pwd)/opt/modm-avr-gcc/* /usr/
-          # echo "$(pwd)/opt/modm-avr-gcc/bin" >> $GITHUB_PATH
-          # popd
+          tar xf modm-avr-gcc.tar.bz2 --directory ${{github.workspace}}/opt
+      - name: enable prebuilt avr-gcc
+        run: |
+          sudo cp -r ${{github.workspace}}/opt/modm-avr-gcc/* /usr/
       - name: checkout repo
         uses: actions/checkout@v2
       - name: build

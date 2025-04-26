@@ -53,14 +53,14 @@ static struct btn_t btns[] = {
 static blockdev_sector_fns_t sd_bd_fns;
 
 static BlockDev root_bd = {
-  .fns = &sd_fns,
+  .fns = &sd_bd_fns,
   .fn_ctx = NULL,
   .sector_start = 0,
   .sector_count = -1,
 };
 
 static BlockDev partition_bd = {
-  .fns = &sd_fns,
+  .fns = &sd_bd_fns,
   .fn_ctx = NULL,
   .sector_start = 0,
   .sector_count = 0,

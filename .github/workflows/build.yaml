@@ -19,7 +19,7 @@ jobs:
         run: |
           echo 'set man-db/auto-update false' | sudo debconf-communicate >/dev/null
           sudo dpkg-reconfigure man-db
-          sudo apt install --no-install-recommends make srecord
+          sudo apt install --no-install-recommends make srecord gcc-avr avr-libc 
       
       - name: cache prebuilt avr-gcc
         id: cache-compiler
@@ -36,7 +36,10 @@ jobs:
       - name: enable prebuilt avr-gcc
         run: |
           sudo cp -r ${{github.workspace}}/opt/avr-gcc/bin/* /usr/bin/
+          sudo cp -r ${{github.workspace}}/opt/avr-gcc/bin/* /bin/
           sudo cp -r ${{github.workspace}}/opt/avr-gcc/avr /usr/lib/
+          sudo cp -r ${{github.workspace}}/opt/avr-gcc/avr /lib/
+          sudo cp -r ${{github.workspace}}/opt/avr-gcc/libexec/gcc /usr/lib/
           echo "${{github.workspace}}/opt/avr-gcc/bin" >> $GITHUB_PATH
       - name: checkout repo
         uses: actions/checkout@v2

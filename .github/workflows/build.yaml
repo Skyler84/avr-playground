@@ -40,12 +40,12 @@ jobs:
           echo "${{github.workspace}}/opt/avr-gcc/bin" >> $GITHUB_PATH
       - name: checkout repo
         uses: actions/checkout@v2
-      # - name: build
-      #   run: |
-      #     mkdir build_${{matrix.board}}
-      #     cd build_${{matrix.board}}
-      #     cmake -DBOARD=${{matrix.board}} ..
-      #     cmake --build . -v
+      - name: build
+        run: |
+          mkdir build_${{matrix.board}}
+          cd build_${{matrix.board}}
+          cmake -DBOARD=${{matrix.board}} ..
+          cmake --build . -v
       - name: upload artifacts
         uses: actions/upload-artifact@v4
         with:

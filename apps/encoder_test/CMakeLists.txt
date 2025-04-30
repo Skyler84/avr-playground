@@ -1,7 +1,11 @@
+if(NOT "${BOARD}" STREQUAL "lafortuna")
+    return()
+endif()
+
 add_executable(encoder_test)
 target_sources(encoder_test
     PRIVATE
         main.c
 )
 
-avr_add_extra_outputs(encoder_test)
+make_avr_app(encoder_test)

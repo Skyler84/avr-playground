@@ -8,13 +8,9 @@ jobs:
   build:
     strategy:
       matrix:
-        board: [lafortuna]
+        board: [lafortuna, ilmatto]
     runs-on: ubuntu-latest
     steps:
-      # - name: install build toolchain
-      #   uses: daaku/gh-action-apt-install@v4
-      #   with:
-      #     packages: make gcc-avr avr-libc
       - name: install build toolchain
         run: |
           echo 'set man-db/auto-update false' | sudo debconf-communicate >/dev/null

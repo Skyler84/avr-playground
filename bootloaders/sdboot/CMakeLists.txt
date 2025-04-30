@@ -1,3 +1,7 @@
+if(NOT "${BOARD}" STREQUAL "lafortuna")
+    return()
+endif()
+
 add_executable(sdboot)
 target_sources(sdboot
     PRIVATE

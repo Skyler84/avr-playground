@@ -1,3 +1,7 @@
+if(NOT "${BOARD}" STREQUAL "lafortuna")
+    return()
+endif()
+
 add_executable(encoder_test)
 target_sources(encoder_test
     PRIVATE

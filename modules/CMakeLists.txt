@@ -44,6 +44,7 @@ function(add_module name)
         POST_BUILD
         OUTPUTS mod_${name}.hex mod_${name}.bin
         COMMAND avr-size mod_${name}
+        COMMAND cp mod_${name} mod_${name}.elf
         COMMAND avr-objcopy -O ihex mod_${name} mod_${name}.hex
         COMMAND avr-objcopy -O binary mod_${name} mod_${name}.bin
         COMMAND_EXPAND_LISTS

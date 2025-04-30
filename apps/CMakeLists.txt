@@ -6,6 +6,7 @@ function(avr_add_extra_outputs target)
         POST_BUILD
         OUTPUTS ${target}.hex ${target}.bin
         COMMAND avr-size ${target}
+        COMMAND cp ${target} ${target}.elf
         COMMAND avr-objcopy -O ihex -R .eeprom ${target} ${target}.hex
         COMMAND avr-objcopy -O binary -R .eeprom ${target} ${target}.bin
         COMMAND cat "$<TARGET_PROPERTY:${target},LINK_MODULES_BINS>" > ${target}.mods.bin

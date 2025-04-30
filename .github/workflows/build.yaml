@@ -61,6 +61,8 @@ jobs:
             build_${{matrix.board}}/**/*.bin
             build_${{matrix.board}}/**/*.a
             build_${{matrix.board}}/**/*.elf
+            !**/CMakeFiles/
+            
 
 
           

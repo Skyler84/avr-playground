@@ -7,7 +7,7 @@
  *
  */
 
- #include "fonts.h"
+ #include "fonts/fonts.h"
  #include "fonts_priv.h"
 
  font_t font5x7 = {

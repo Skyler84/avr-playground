@@ -1,6 +1,6 @@
-#include "fonts.h"
+#include "fonts/fonts.h"
 #include "font5x7.h"
-#include "pic.h"
+#include "module/pic.h"
 
 MODULE_FN_PROTOS(fonts, FONTS_FUNCTION_EXPORTS)
 

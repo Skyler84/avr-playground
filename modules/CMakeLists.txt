@@ -13,10 +13,19 @@ function(target_link_modules target)
     if (module STREQUAL "${target}")
     continue()
     endif()
-        message (STATUS "Linking target ${TARGET} with module ${module}")
         if (TARGET ${module})
-            message (STATUS "Linking target ${TARGET} with module ${module}")
             target_link_libraries(${TARGET} PRIVATE mod_interface_${module})
+            get_target_property(link_modules ${module} LINK_MODULES)
+            message(STATUS "Linking target ${TARGET} with module ${module} link_modules: ${link_modules}")
+            if ("${link_modules}" STREQUAL "link_modules-NOTFOUND")
+                set(link_modules "")
+            endif()
+            list(APPEND link_modules "${module}")
+            message(STATUS "${link_modules}")
+            set_property(TARGET ${TARGET} APPEND PROPERTY LINK_MODULES "mod_${module}")
+            get_target_property(mod_bin mod_${module} BINFILE)
+            # add_dependencies(${TARGET} mod_${module}.bin)
+            set_property(TARGET ${TARGET} APPEND PROPERTY LINK_MODULES_BINS "${mod_bin}")
         else()
             message (FATAL_ERROR "Module ${module} not found")
         endif()
@@ -30,6 +39,19 @@ function(add_module name)
     # create both a static library
     # and an interface library with hex files
     add_executable(mod_${name})
+    add_custom_command(
+        TARGET mod_${name}
+        POST_BUILD
+        OUTPUTS mod_${name}.hex mod_${name}.bin
+        COMMAND avr-size mod_${name}
+        COMMAND avr-objcopy -O ihex mod_${name} mod_${name}.hex
+        COMMAND avr-objcopy -O binary mod_${name} mod_${name}.bin
+        COMMAND_EXPAND_LISTS
+        VERBATIM
+    )
+    set_target_properties(mod_${name} PROPERTIES
+        BINFILE "${CMAKE_CURRENT_BINARY_DIR}/mod_${name}.bin"
+    )
     add_library(mod_interface_${name} INTERFACE)
     target_compile_options(mod_${name}
         PRIVATE
@@ -39,6 +61,7 @@ function(add_module name)
     target_link_options(mod_${name}
         PRIVATE
             -nostartfiles    
+            -T ${CMAKE_SOURCE_DIR}/modules/module/ldscripts/module.x
     )
     target_sources(mod_${name}
         PRIVATE
@@ -66,7 +89,7 @@ function(add_module name)
     #     PRIVATE
     #         "$<TARGET_PROPERTY:${name},LINK_LIBRARIES>"
     # )
-    target_link_modules(mod_${name} module)
+    target_link_libraries(mod_${name} mod_interface_module)
 endfunction()
 
 add_subdirectory(module)

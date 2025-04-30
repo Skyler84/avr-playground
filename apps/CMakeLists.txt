@@ -20,5 +20,6 @@ function(make_avr_app target)
 endfunction()
 
 
+add_subdirectory(blinky)
 add_subdirectory(audio_test)
 add_subdirectory(encoder_test)

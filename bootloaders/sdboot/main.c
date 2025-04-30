@@ -197,11 +197,13 @@ void __attribute__((noreturn)) app_reboot() {
   // reboot using reset
   asm volatile ("jmp 0x0000");
 #endif
+  __builtin_unreachable();
 }
 
 void __attribute__((noreturn)) bl_reboot() {
   // reboot bootloader?
   ((void(*)())0x0000)();
+  __builtin_unreachable();
 }
 
 void __attribute__((noreturn)) error() {
@@ -309,7 +311,7 @@ void lcd_debug_u16(lcd_xcoord_t x, lcd_ycoord_t y, uint16_t val) {
   lcd_fns.display_char(x+18, y, 1, fonts_fns.get_default(), &fonts_fns, hex[(val>>0)&0x0f], WHITE);
 }
 
-void sd_boot() {
+void __attribute__((noreturn)) sd_boot() {
   lcd_fns.fill_rectangle(0, 320, 0, 240, BLACK);
   sd_fns.preinit();  
 
@@ -501,7 +503,8 @@ void __attribute__((noreturn)) run_interactive() {
     PSTR("Reboot application")
   };
 
-  __attribute__((noreturn)) void (*menu_func[])(void) = {
+  typedef __attribute__((noreturn)) void (*menu_func_t)(void);
+  menu_func_t menu_func[] = {
     sd_boot,
     app_reboot
   };
@@ -510,7 +513,6 @@ void __attribute__((noreturn)) run_interactive() {
     lcd_fns.display_stringP(20, 0, 40 + i*20, 2, fonts_fns.get_default(), &fonts_fns, menu[i], 0xFFFF);
   }
   int8_t selection = 0;
-  typedef void (*menu_func_t)(void);
   __attribute__((noreturn)) menu_func_t func = NULL;
   lcd_fns.display_char(0, 40 + selection*20, 2, fonts_fns.get_default(), &fonts_fns, '>', WHITE);
   encoder_init();

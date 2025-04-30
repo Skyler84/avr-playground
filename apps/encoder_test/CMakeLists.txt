@@ -4,4 +4,4 @@ target_sources(encoder_test
         main.c
 )
 
-avr_add_extra_outputs(encoder_test)
+make_avr_app(encoder_test)

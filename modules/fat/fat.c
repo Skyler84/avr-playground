@@ -414,7 +414,7 @@ fstatus_t fat_readdir(FAT_FileSystem_t *fs, file_descriptor_t fd, struct FileInf
     }
     *di = '\0';
     entry->size = dir_entry.file_size;
-    entry->inode = dir_entry.high_word_of_cluster << 16 | dir_entry.low_word_of_cluster;
+    entry->inode = (uint32_t)dir_entry.high_word_of_cluster << 16 | dir_entry.low_word_of_cluster;
     return 0;
   }
 

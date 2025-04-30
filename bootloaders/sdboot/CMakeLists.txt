@@ -17,4 +17,9 @@ target_link_libraries(sdboot
         module
 )
 
-avr_add_extra_outputs(sdboot)
+set_target_properties(sdboot PROPERTIES 
+    BOOT_START_ADDRESS 0xe000
+)
+
+make_avr_app(sdboot)
+make_avr_bootloader(sdboot)

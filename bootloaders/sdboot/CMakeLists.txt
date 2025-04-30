@@ -18,7 +18,9 @@ target_link_libraries(sdboot
 )
 
 set_target_properties(sdboot PROPERTIES 
-    BOOT_START_ADDRESS 0xe000
+    BOOT_START_ADDRESS 0x1E000
+    BOOT_MODULE_START_ADDRESS 0x1C000
+    APP_MODULE_START_ADDRESS 0x2000
 )
 
 make_avr_app(sdboot)

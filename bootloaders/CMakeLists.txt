@@ -3,6 +3,10 @@ function(make_avr_bootloader target)
     if(NOT boot_start)
         message(FATAL_ERROR "BOOT_START_ADDRESS property not set for target ${target}")
     endif()
+    get_target_property(boot_module_start ${target} BOOT_MODULE_START_ADDRESS)
+    if(NOT boot_module_start)
+        message(FATAL_ERROR "BOOT_MODULE_START_ADDRESS property not set for target ${target}")
+    endif()
 
     set(app ${target}.boot)
     add_executable(${app})
@@ -28,10 +32,10 @@ function(make_avr_bootloader target)
         COMMAND avr-objcopy -O ihex ${app} ${app}.hex
         COMMAND avr-objcopy -O binary ${app} ${app}.bin
         COMMAND cat "$<TARGET_PROPERTY:${target},LINK_MODULES_BINS>" > ${app}.mods.bin
-        COMMAND cat ${app}.bin ${app}.mods.bin > ${app}.all.bin
-        COMMAND srec_cat -O ${app}.all.hex -Intel ${app}.all.bin -Binary
+        COMMAND "$<$<BOOL:$<TARGET_PROPERTY:${target},LINK_MODULES_BINS>>:avr-objcopy;-I;binary;-O;ihex;${app}.mods.bin;${app}.mods.hex;--change-addresses;${boot_module_start}>"
+        COMMAND srec_cat -O ${app}.all.hex "$<$<BOOL:$<TARGET_PROPERTY:${target},LINK_MODULES_BINS>>:-Intel;${app}.mods.hex>" -Intel ${app}.hex -Intel || { echo "Try lowering BOOT_MODULE_START_ADDRESS for target ${target}" \\\; exit 1 \\\; }
+        COMMAND avr-size ${app}.all.hex
         COMMAND_EXPAND_LISTS
-        VERBATIM
     )
 endfunction()
 

@@ -133,7 +133,7 @@ extern FileInfo_t dir_entry;
   o(modname, init          , void              , FAT_FileSystem_t*, BlockDev *bd)                                 \
   o(modname, mount         , fstatus_t         , FAT_FileSystem_t*, bool, bool)                                 \
   o(modname, umount        , void              , FAT_FileSystem_t*)                                 \
-  o(modname, stat          , fstatus_t         , FAT_FileSystem_t*, const char*)                                        \
+  o(modname, stat          , fstatus_t         , FAT_FileSystem_t*, const char*, struct FileInfo *st)                                        \
   o(modname, open          , file_descriptor_t , FAT_FileSystem_t*, const char*, uint8_t mode)               \
   o(modname, openat        , file_descriptor_t , FAT_FileSystem_t*, file_descriptor_t, const char*, uint8_t mode)               \
   o(modname, close         , void              , FAT_FileSystem_t*, file_descriptor_t)               \

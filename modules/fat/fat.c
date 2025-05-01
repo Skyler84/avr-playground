@@ -238,10 +238,11 @@ void fat_umount(FAT_FileSystem_t *fs)
 {
   (void)fs;
 }
-fstatus_t fat_stat(FAT_FileSystem_t *fs, const char *filename) 
+fstatus_t fat_stat(FAT_FileSystem_t *fs, const char *filename, struct FileInfo *st) 
 { 
   (void)fs;
   (void)filename;
+  (void)st;
 
   return 0; 
 }

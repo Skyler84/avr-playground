@@ -95,7 +95,7 @@ typedef struct modname##_fns_t{\
 // --------------------------------
 
 #define REGISTER_MODULE_FN(modname, name, ...) \
-  { modname##_##name##_fn_id, (fn_ptr_t)&modname##_##name },
+  { modname##_##name##_fn_id, (void*)&modname##_##name },
 
 #define REGISTER_MODULE(modname, id, exports, api_ver)\
   static const module_fn_t module_fn_table[] __attribute__((used, section(".module.table"))) = {\

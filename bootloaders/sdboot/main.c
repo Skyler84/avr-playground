@@ -14,13 +14,16 @@
 #include "buttons.h"
 #include "gui.h"
 
-#define MODULE_AS_STATIC_LIB
-#include "fonts.h"
-#include "lcd.h"
-#include "sd.h"
-#include "fat.h"
+#include "module/imports.h"
+#include "fonts/fonts.h"
+#include "lcd/lcd.h"
+#include "sd/sd.h"
+#include "fat/fat.h"
 
 MODULE_IMPORT_FUNCTIONS(fat, FAT_MODULE_ID, FAT_FUNCTION_EXPORTS)
+MODULE_IMPORT_FUNCTIONS(fonts, FONTS_MODULE_ID, FONTS_FUNCTION_EXPORTS)
+MODULE_IMPORT_FUNCTIONS(lcd, LCD_MODULE_ID, LCD_FUNCTION_EXPORTS)
+MODULE_IMPORT_FUNCTIONS(sd, SD_MODULE_ID, SD_FUNCTION_EXPORTS)
 
 // asm("
 //   .org 0x1fffe\n"
@@ -28,27 +31,23 @@ MODULE_IMPORT_FUNCTIONS(fat, FAT_MODULE_ID, FAT_FUNCTION_EXPORTS)
 // );
 
 
-static fonts_fns_t fonts_fns = {
-  .get_default = fonts_get_default,
-  .get_char_width = fonts_get_char_width,
-  .get_char_height = fonts_get_char_height,
-  .get_char_bitmap = fonts_get_char_bitmap,
-} ;
 
-static blockdev_sector_fns_t sd_fns = {
-  .read_sector = sd_rdblock,
-  .write_sector = sd_wrblock,
-};
+// static blockdev_sector_fns_t sd_fns = {
+//   .read_sector = sd_rdblock,
+//   .write_sector = sd_wrblock,
+// };
+
+static blockdev_sector_fns_t sd_bd_fns;
 
 static BlockDev root_bd = {
-  .fns = &sd_fns,
+  .fns = &sd_bd_fns,
   .fn_ctx = NULL,
   .sector_start = 0,
   .sector_count = -1,
 };
 
 static BlockDev partition_bd = {
-  .fns = &sd_fns,
+  .fns = &sd_bd_fns,
   .fn_ctx = NULL,
   .sector_start = 0,
   .sector_count = 0,
@@ -70,11 +69,13 @@ void __attribute__((noreturn)) app_reboot() {
   // reboot using reset
   asm volatile ("jmp 0x0000");
 #endif
+  __builtin_unreachable();
 }
 
 void __attribute__((noreturn)) bl_reboot() {
   // reboot bootloader?
   ((void(*)())0x0000)();
+  __builtin_unreachable();
 }
 
 void __attribute__((noreturn)) error() {
@@ -85,8 +86,12 @@ void __attribute__((noreturn)) error() {
 }
 
 void __attribute__((noreturn)) boot_from_file(const char *filename, uint32_t load_addr) {
-  sd_preinit();
-  sd_initialise();
+  (void)filename;
+  (void)load_addr;
+  // MOD_CALL(sd, &sd_fns, preinit);
+  // MOD_CALL(sd, &sd_fns, initialise);
+  sd_fns.preinit();
+  sd_fns.initialise();
 
   // open file
   // program file to flash
@@ -95,13 +100,15 @@ void __attribute__((noreturn)) boot_from_file(const char *filename, uint32_t loa
 }
 
 int8_t partitions_init() {
+  sd_bd_fns.read_sector  = (bd_read_sector_fn_t )sd_fns.rdblock;
+  sd_bd_fns.write_sector = (bd_write_sector_fn_t)sd_fns.wrblock;
   // initialize partitions
-  root_bd.fns = &sd_fns;
+  root_bd.fns = &sd_bd_fns;
   root_bd.fn_ctx = NULL;
   root_bd.sector_start = 0;
   root_bd.sector_count = -1;
 
-  partition_bd.fns = &sd_fns;
+  partition_bd.fns = &sd_bd_fns;
   partition_bd.fn_ctx = NULL;
   partition_bd.sector_start = 0;
   partition_bd.sector_count = 0;
@@ -172,15 +179,15 @@ void flash_page_erase_program(uint32_t page, const uint8_t *buf) {
 
 char hex[] = "0123456789ABCDEF";
 void lcd_debug_u16(lcd_xcoord_t x, lcd_ycoord_t y, uint16_t val) {
-  lcd_display_char(x, y, 1, fonts_get_default(), &fonts_fns, hex[(val>>12)&0x0f], WHITE);
-  lcd_display_char(x+6, y, 1, fonts_get_default(), &fonts_fns, hex[(val>>8)&0x0f], WHITE);
-  lcd_display_char(x+12, y, 1, fonts_get_default(), &fonts_fns, hex[(val>>4)&0x0f], WHITE);
-  lcd_display_char(x+18, y, 1, fonts_get_default(), &fonts_fns, hex[(val>>0)&0x0f], WHITE);
+  lcd_fns.display_char(x, y, 1, fonts_fns.get_default(), &fonts_fns, hex[(val>>12)&0x0f], WHITE);
+  lcd_fns.display_char(x+6, y, 1, fonts_fns.get_default(), &fonts_fns, hex[(val>>8)&0x0f], WHITE);
+  lcd_fns.display_char(x+12, y, 1, fonts_fns.get_default(), &fonts_fns, hex[(val>>4)&0x0f], WHITE);
+  lcd_fns.display_char(x+18, y, 1, fonts_fns.get_default(), &fonts_fns, hex[(val>>0)&0x0f], WHITE);
 }
 
-void sd_boot() {
-  lcd_fill_rectangle(0, 320, 0, 240, BLACK);
-  sd_preinit();  
+void __attribute__((noreturn)) sd_boot() {
+  lcd_fns.fill_rectangle(0, 320, 0, 240, BLACK);
+  sd_fns.preinit();  
 
   if (!sd_detected()) {
     gui_msgboxP(&gui,PSTR("Insert card"), MSGBOX_OK);
@@ -200,7 +207,7 @@ void sd_boot() {
     }
   }
   {
-    uint8_t buf[512];
+    // uint8_t buf[512];
     // fat_fns_init();
     fat_fs_fns = (FileSystem_fns_t){
       .mount = (fs_mount_fn_t)fat_fns.mount,
@@ -222,7 +229,7 @@ void sd_boot() {
     // fs.fs.fns = &fat_fs_fns;
     fat_fns.init(&fs, &partition_bd);
     fstatus_t ret;
-    char hex[] = "0123456789ABCDEF";
+    // char hex[] = "0123456789ABCDEF";
     ret = fat_fns.mount(&fs, false, false);
     if (ret != 0) {
       gui_msgboxP(&gui,PSTR("Error mounting filesystem"), MSGBOX_OK);
@@ -234,11 +241,10 @@ void sd_boot() {
     uint8_t line_start = 0;
     char dir[64] = "/FOLDER/";
     file_descriptor_t dirfd = fat_fns.opendir(&fs, dir);
-    uint32_t cluster;
     const uint8_t line_spacing = 30;
     uint8_t selected = 0;
     while(1) {
-      lcd_fill_rectangle(0, 320, 0, 20, BLACK);
+      lcd_fns.fill_rectangle(0, 320, 0, 20, BLACK);
       // if (line_start > )
       lcd_debug_u16(0, 0, line_start);
       lcd_debug_u16(0, 10, selection);
@@ -285,7 +291,7 @@ void sd_boot() {
         lcd_ycoord_t y = 40 + ln*line_spacing;
         lcd_ycoord_t ys = y - (line_spacing-16)/2;
         lcd_ycoord_t ye = y + (line_spacing+1+16)/2;
-        lcd_fill_rectangle(10, 309, ys, ye, colors[ln%2]);
+        lcd_fns.fill_rectangle(10, 309, ys, ye, colors[ln%2]);
       }
       while ((ret = fat_fns.readdir(&fs, dirfd, &info)) == 0) {
         if (line_no < line_start) {
@@ -296,9 +302,9 @@ void sd_boot() {
           line_no++;
           continue;
         }
-        lcd_display_string(40, 0, y, 2, fonts_get_default(), &fonts_fns, info.name, 0xFFFF);
+        lcd_fns.display_string(40, 0, y, 2, fonts_fns.get_default(), &fonts_fns, info.name, 0xFFFF);
         if (line_no == selection) {
-          lcd_display_char(20, y, 2, fonts_get_default(), &fonts_fns, '>', WHITE);
+          lcd_fns.display_char(20, y, 2, fonts_fns.get_default(), &fonts_fns, '>', WHITE);
         }
         y += 30;
         line_no++;
@@ -361,27 +367,27 @@ void __attribute__((noreturn)) run_interactive() {
   PORTE |= 0x80;
   DDRC &= ~0x3C;
   PORTC |= 0x3C;
-  lcd_init();
-  lcd_set_orientation(West);
-  lcd_clear(0x0000);
+  lcd_fns.init();
+  lcd_fns.set_orientation(West);
+  lcd_fns.clear(0x0000);
 
   const char *menu[] = {
     PSTR("Boot from SD file"),
     PSTR("Reboot application")
   };
 
-  __attribute__((noreturn)) void (*menu_func[])(void) = {
+  typedef __attribute__((noreturn)) void (*menu_func_t)(void);
+  menu_func_t menu_func[] = {
     sd_boot,
     app_reboot
   };
 
   for (int i = 0; i < 2; i++) {
-    lcd_display_stringP(20, 0, 40 + i*20, 2, fonts_get_default(), &fonts_fns, menu[i], 0xFFFF);
+    lcd_fns.display_stringP(20, 0, 40 + i*20, 2, fonts_fns.get_default(), &fonts_fns, menu[i], 0xFFFF);
   }
   int8_t selection = 0;
-  typedef void (*menu_func_t)(void);
   __attribute__((noreturn)) menu_func_t func = NULL;
-  lcd_display_char(0, 40 + selection*20, 2, fonts_get_default(), &fonts_fns, '>', WHITE);
+  lcd_fns.display_char(0, 40 + selection*20, 2, fonts_fns.get_default(), &fonts_fns, '>', WHITE);
   encoder_init();
   DDRE &= ~0x80;
   PORTE |= 0x80;
@@ -404,14 +410,14 @@ void __attribute__((noreturn)) run_interactive() {
     } else if (selection > 1) {
       selection = 1;
     }
-    lcd_fill_rectangle(0, 19, 40, 40 + 2*20, BLACK);
-    lcd_display_char(0, 40 + selection*20, 2, fonts_get_default(), &fonts_fns, '>', WHITE);
+    lcd_fns.fill_rectangle(0, 19, 40, 40 + 2*20, BLACK);
+    lcd_fns.display_char(0, 40 + selection*20, 2, fonts_fns.get_default(), &fonts_fns, '>', WHITE);
   }
 
   func();
 }
 
-void main() {
+int main() {
   // check if extreset
   if ((MCUSR & _BV(EXTRF)) == 0) {
     app_reboot();
@@ -432,4 +438,5 @@ void main() {
   RAMPZ = 1;
 
   run_interactive();
+  __builtin_unreachable();
 }

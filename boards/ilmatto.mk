@@ -1,2 +1,0 @@
-MCU?=atmega644p
-F_CPU?=12000000

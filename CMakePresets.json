@@ -1,0 +1,30 @@
+{
+    "version": 9,
+    "configurePresets": [
+        {
+            "name": "lafortuna",
+            "displayName": "Build for La Fortuna",
+            "description": "Sets Ninja generator, build and install directory",
+            "generator": "Unix Makefiles",
+            "binaryDir": "${sourceDir}/out/build/${presetName}",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}",
+                "BOARD": "lafortuna"
+            }
+        },
+        {
+            "name": "ilmatto",
+            "displayName": "Build for IlMatto",
+            "description": "Sets Ninja generator, build and install directory",
+            "generator": "Unix Makefiles",
+            "binaryDir": "${sourceDir}/out/build/${presetName}",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}",
+                "BOARD": "ilmatto"
+            }
+        }
+
+    ]
+}

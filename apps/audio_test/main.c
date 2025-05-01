@@ -41,7 +41,7 @@ void sysclk_init() {
     CLKPR = 0x00;
 }
 
-void main() {
+int main() {
     sysclk_init();
     audio_init_32khz();
     while(1);

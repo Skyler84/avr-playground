@@ -11,17 +11,42 @@ jobs:
         board: [lafortuna, ilmatto]
     runs-on: ubuntu-latest
     steps:
-      # - name: install build toolchain
-      #   uses: daaku/gh-action-apt-install@v4
-      #   with:
-      #     packages: make gcc-avr avr-libc
       - name: install build toolchain
-        run: sudo apt install make gcc-avr avr-libc srecord
+        run: |
+          echo 'set man-db/auto-update false' | sudo debconf-communicate >/dev/null
+          sudo dpkg-reconfigure man-db
+          sudo apt install --no-install-recommends make srecord
+      
+      - name: cache prebuilt avr-gcc
+        id: cache-compiler
+        uses: actions/cache@v4
+        with: 
+          path: ${{github.workspace}}/opt/avr-gcc
+          key: ${{ runner.os }}-avr-gcc
+      - name: download prebuilt avr-gcc
+        if: steps.cache-compiler.outputs.cache-hit != 'true'
+        run: | 
+          wget https://github.com/modm-io/avr-gcc/releases/download/v14.2.0/modm-avr-gcc.tar.bz2
+          mkdir opt
+          tar xf modm-avr-gcc.tar.bz2 --directory ${{github.workspace}}/opt
+      - name: enable prebuilt avr-gcc
+        run: |
+          sudo cp -r ${{github.workspace}}/opt/avr-gcc/bin/* /usr/bin/
+          sudo cp -r ${{github.workspace}}/opt/avr-gcc/bin/* /bin/
+          sudo cp -r ${{github.workspace}}/opt/avr-gcc/avr /usr/lib/
+          sudo cp -r ${{github.workspace}}/opt/avr-gcc/avr /lib/
+          sudo cp -r ${{github.workspace}}/opt/avr-gcc/libexec/gcc /usr/lib/
+          sudo cp -r ${{github.workspace}}/opt/avr-gcc/ /opt
+          echo "${{github.workspace}}/opt/avr-gcc/bin" >> $GITHUB_PATH
+          echo "/opt/avr-gcc/bin" >> $GITHUB_PATH
       - name: checkout repo
         uses: actions/checkout@v2
       - name: build
-        run:
-          make BOARD=${{matrix.board}} BLD_DIR=build_${{matrix.board}} all
+        run: |
+          mkdir build_${{matrix.board}}
+          cd build_${{matrix.board}}
+          cmake -DBOARD=${{matrix.board}} ..
+          cmake --build . -v
       - name: upload artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -32,6 +57,8 @@ jobs:
             build_${{matrix.board}}/**/*.bin
             build_${{matrix.board}}/**/*.a
             build_${{matrix.board}}/**/*.elf
+            !**/CMakeFiles/
+            
 
 
           

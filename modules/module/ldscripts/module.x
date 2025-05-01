@@ -87,10 +87,8 @@ SECTIONS
   .text   :
   {
     __module_start = . ;
-    LONG(0x4d4f447f)
-    KEEP(*(.module.id))
-    KEEP(*(.module.table))
-    *(.module.table)
+    KEEP(*(.module_header))
+    KEEP(*(.module.*))
     /* For data that needs to reside in the lower 64k of progmem.  */
      *(.progmem.gcc*)
     /* PR 13812: Placing the trampolines here gives a better chance

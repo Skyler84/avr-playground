@@ -97,13 +97,18 @@ typedef struct modname##_fns_t{\
 #define REGISTER_MODULE_FN(modname, name, ...) \
   { modname##_##name##_fn_id, (void*)&modname##_##name },
 
-#define REGISTER_MODULE(modname, id, exports, api_ver)\
-  static const module_fn_t module_fn_table[] __attribute__((used, section(".module.table"))) = {\
-    exports(modname, REGISTER_MODULE_FN)\
-    {0xffff, (void(*)())api_ver},\
-    {0x0000, NULL}\
-  }; \
-  static const module_id_t module_id __attribute__((used, section(".module.id"))) = id\
+#define REGISTER_MODULE(modname, _id, exports, api_ver)\
+  static const module_t module __attribute__((used, section(".module_header"))) = \
+  {\
+    .magic = AVR_MODULE_MAGIC,\
+    .id = _id,\
+    .type = XCAT(MODULE_TYPE_,XCAT(modname, _MODTYPE)),\
+    .fn_table = {\
+      exports(modname, REGISTER_MODULE_FN)\
+      {0xffff, (void(*)())api_ver},\
+      {0x0000, NULL}\
+    }\
+  };
 
 #define DECLARE_FN_PROTO(modname, name, returns, ...) \
   returns modname##_##name(__VA_ARGS__);

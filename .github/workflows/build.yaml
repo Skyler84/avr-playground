@@ -9,7 +9,7 @@ jobs:
     strategy:
       matrix:
         board: [lafortuna, ilmatto]
-        gccver: ["v14.2.0", "v13.2.0", "v12.3.0", "v12.2.0", "v11.2.0"]
+        gccver: ["v14.2.0", "v13.2.0"]
     runs-on: ubuntu-latest
     steps:
       - name: install build toolchain

@@ -10,8 +10,8 @@ if(NOT "${BOARD}" STREQUAL "")
     include(boards/${BOARD}.cmake)
 endif()
 
-add_compile_options(-ggdb -g -Os)
-add_link_options(-ggdb -g -Os)
+add_compile_options(-ggdb -g -Os -Wall -Wextra -Werror)
+add_link_options(-ggdb -g -Os -Wall -Wextra -Werror)
 
 
 add_subdirectory(modules)

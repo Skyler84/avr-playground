@@ -27,7 +27,6 @@ static uint8_t read_data() {
 }
 
 #else
-#pragma optimize(3)
 static void NOINLINE write_cmd(uint8_t cmd) {
   RS_lo();
   WRITE(cmd);
@@ -59,13 +58,13 @@ inline static void write_data16(uint16_t data) {
   write_data((data) & 0xFF);
 }
 
-static void NOINLINE write_cmd_data(uint8_t cmd, uint8_t ndata, char *data) {
-  uint8_t i;
-  char *d = data;
-  write_cmd(cmd);
-  for(i=0; i<ndata; i++)
-    write_data(*d++);
-}
+// static void NOINLINE write_cmd_data(uint8_t cmd, uint8_t ndata, char *data) {
+//   uint8_t i;
+//   char *d = data;
+//   write_cmd(cmd);
+//   for(i=0; i<ndata; i++)
+//     write_data(*d++);
+// }
 
 #define pgm_read_byte_elpm(addr)   \
 (__extension__({                \
@@ -102,7 +101,7 @@ static void NOINLINE write_cmd_data(uint8_t cmd, uint8_t ndata, char *data) {
 
 static void NOINLINE write_cmd_data_seq_P(const uint8_t *seq) {
   uint8_t cmd;
-  while(cmd = pgm_read_byte_elpm(seq++)) {
+  while((cmd = pgm_read_byte_elpm(seq++)) != 0) {
     write_cmd(cmd);
     uint8_t ndata = pgm_read_byte_elpm(seq++);
     for (uint8_t i=0; i<ndata; i++) {
@@ -124,8 +123,6 @@ static void NOINLINE lcd_set_window(lcd_xcoord_t xs, lcd_xcoord_t xe, lcd_ycoord
 }
 
 MODULE_FN_PROTOS(lcd, LCD_FUNCTION_EXPORTS)
-
-#pragma optimise(s)
 
 void lcd_init() {
 
@@ -154,7 +151,7 @@ void lcd_init() {
 	write_cmd(DISPLAY_OFF);
 	write_cmd(SLEEP_OUT);
 	_delay_ms(60);
-  const static uint8_t PROGMEM init_seq[] = {
+  static const uint8_t PROGMEM init_seq[] = {
     INTERNAL_IC_SETTING,			 1, 0x01,
 	  POWER_CONTROL_1,				 2, 0x26, 0x08,
     POWER_CONTROL_2,				 1, 0x10,
@@ -188,8 +185,6 @@ void lcd_init() {
 	BLC_hi();
 }
 
-#pragma optimize(3)
-
 void lcd_set_orientation(orientation o) {
   
 	write_cmd(MEMORY_ACCESS_CONTROL);
@@ -216,8 +211,8 @@ void lcd_set_orientation(orientation o) {
 }
 
 void lcd_clear(lcd_colour_t col) {
-  lcd_xcoord_t w;
-  lcd_ycoord_t h;
+  lcd_xcoord_t w = 0;
+  lcd_ycoord_t h = 0;
   write_cmd(MEMORY_ACCESS_CONTROL);
   uint8_t data = read_data();
   switch(data) {
@@ -297,9 +292,7 @@ void lcd_display_char(lcd_xcoord_t x, lcd_ycoord_t y, uint8_t scale, font_t *fon
 void lcd_display_stringP(lcd_xcoord_t _x, lcd_xcoord_t wrap, lcd_ycoord_t y, uint8_t scale, font_t *font, fonts_fns_t *font_fns, const char* str, lcd_colour_t col) {
   char c;
   lcd_xcoord_t x = _x;
-  uint8_t char_width = font_fns->get_char_width(font, (uint8_t*)&c);
-  uint8_t char_height = font_fns->get_char_height(font, (uint8_t*)&c);
-  while (c = pgm_read_byte_elpm(str++)) {
+  while ((c = pgm_read_byte_elpm(str++)) != 0) {
     lcd_display_char(x, y, scale, font, font_fns, c, col);
     uint8_t char_width = font_fns->get_char_width(font, (uint8_t*)&c);
     x += (char_width+1)*scale;
@@ -314,7 +307,7 @@ void lcd_display_stringP(lcd_xcoord_t _x, lcd_xcoord_t wrap, lcd_ycoord_t y, uin
 void lcd_display_string(lcd_xcoord_t _x, lcd_xcoord_t wrap, lcd_ycoord_t y, uint8_t scale, font_t *font, fonts_fns_t *font_fns, const char* str, lcd_colour_t col) {
   char c;
   lcd_xcoord_t x = _x;
-  while (c = *str++) {
+  while ((c = *str++) != 0) {
     lcd_display_char(x, y, scale, font, font_fns, c, col);
     uint8_t char_width = font_fns->get_char_width(font, (uint8_t*)&c);
     x += (char_width+1)*scale;
@@ -337,7 +330,6 @@ lcd_ycoord_t lcd_get_height() {
 lcd_coord_t lcd_get_size(orientation o) {
   lcd_coord_t size;
   write_cmd(MEMORY_ACCESS_CONTROL);
-  uint8_t data = read_data();
   switch(o) {
     case North:
     case South:

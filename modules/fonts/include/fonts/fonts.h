@@ -26,5 +26,9 @@ typedef const __flash struct font{
 #define FONTS_API_VER 1
 #define FONTS_MODULE_ID 0x0101
 
+#ifndef fonts_MODTYPE
+#error "fonts_MODTYPE not defined"
+#endif
+
 DECLARE_MODULE(fonts, FONT_MODULE_ID, FONTS_FUNCTION_EXPORTS);
 

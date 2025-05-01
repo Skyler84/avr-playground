@@ -11,7 +11,7 @@
 
 #include "main.h"
 #include "encoder.h"
-#define MODULE_AS_STATIC_LIB
+#include "module/imports.h"
 #include "fonts/fonts.h"
 #include "lcd/lcd.h"
 #include "sd/sd.h"
@@ -69,13 +69,13 @@ static BlockDev partition_bd = {
 FileSystem_fns_t fat_fs_fns;
 FAT_FileSystem_t fs;
 
-static size_t my_strlen_P(const char __flash1 *s) {
-  size_t len = 0;
-  while (*s++) {
-    len++;
-  }
-  return len;
-}
+// static size_t my_strlen_P(const char __flash1 *s) {
+//   size_t len = 0;
+//   while (*s++) {
+//     len++;
+//   }
+//   return len;
+// }
 
 int8_t is_button_pressed(uint8_t btn_id) {
   return !(*(btns[btn_id].port) & btns[btn_id].bit);
@@ -86,7 +86,7 @@ int8_t is_button_released(uint8_t btn_id) {
 }
 
 void wait_button_press(uint8_t btn_id) {
-  int timeout;
+  int timeout = 0;
   while (timeout++ < 100) {
     // wait for button press
     if (is_button_released(btn_id)) timeout = 0;
@@ -95,8 +95,7 @@ void wait_button_press(uint8_t btn_id) {
 }
 
 void wait_button_release(uint8_t btn_id) {
-
-  int timeout;
+  int timeout = 0;
   while (timeout++ < 100) {
     // wait for button release
     if (is_button_pressed(btn_id)) timeout = 0;
@@ -161,11 +160,13 @@ const uint8_t btn_strings[7][3] = {
 };
 
 int8_t msgboxP(const char *msg, enum msgbox_type_t type) {
+  (void)msg;
+  (void)type;
   type = 0;
   lcd_xcoord_t boxw = 200;
   lcd_ycoord_t boxh = 80;
   lcd_fns.fill_rectangle(160-boxw/2, 160+boxw/2, 120-boxh/2, 120+boxh/2, BLUE);
-  int len = my_strlen_P(msg);
+  // int len = my_strlen_P(msg);
   // lcd_display_stringP(160 - 3*len, 0, 100-4, 1, fonts_get_default(), &fonts_fns, msg, 0xFFFF);
   uint8_t btn_count = 0;
   for (uint8_t i = 0; i < 3; i++) {
@@ -173,11 +174,11 @@ int8_t msgboxP(const char *msg, enum msgbox_type_t type) {
       btn_count++;
     }
   }
-  uint8_t spacing = 65;
-  uint8_t w = 60;
+  // uint8_t spacing = 65;
+  // uint8_t w = 60;
   
   for (uint8_t i = 0; i < btn_count; i++) {
-    uint8_t x = 160 - (btn_count-1)*spacing/2 + i*spacing;
+    // uint8_t x = 160 - (btn_count-1)*spacing/2 + i*spacing;
     uint8_t btn_id = btn_strings[type][i];
     // lcd_fill_rectangle(x-w/2, x+w/2, 140, 150, 0x65bd);
     if (btn_id > 7) continue;
@@ -214,6 +215,8 @@ void __attribute__((noreturn)) error() {
 }
 
 void __attribute__((noreturn)) boot_from_file(const char *filename, uint32_t load_addr) {
+  (void)filename;
+  (void)load_addr;
   // MOD_CALL(sd, &sd_fns, preinit);
   // MOD_CALL(sd, &sd_fns, initialise);
   sd_fns.preinit();
@@ -226,8 +229,8 @@ void __attribute__((noreturn)) boot_from_file(const char *filename, uint32_t loa
 }
 
 int8_t partitions_init() {
-  sd_bd_fns.read_sector = sd_fns.rdblock;
-  sd_bd_fns.write_sector = sd_fns.wrblock;
+  sd_bd_fns.read_sector  = (bd_read_sector_fn_t )sd_fns.rdblock;
+  sd_bd_fns.write_sector = (bd_write_sector_fn_t)sd_fns.wrblock;
   // initialize partitions
   root_bd.fns = &sd_bd_fns;
   root_bd.fn_ctx = NULL;
@@ -333,7 +336,7 @@ void __attribute__((noreturn)) sd_boot() {
     }
   }
   {
-    uint8_t buf[512];
+    // uint8_t buf[512];
     // fat_fns_init();
     fat_fs_fns = (FileSystem_fns_t){
       .mount = (fs_mount_fn_t)fat_fns.mount,
@@ -355,7 +358,7 @@ void __attribute__((noreturn)) sd_boot() {
     // fs.fs.fns = &fat_fs_fns;
     fat_fns.init(&fs, &partition_bd);
     fstatus_t ret;
-    char hex[] = "0123456789ABCDEF";
+    // char hex[] = "0123456789ABCDEF";
     ret = fat_fns.mount(&fs, false, false);
     if (ret != 0) {
       msgboxP(PSTR("Error mounting filesystem"), MSGBOX_OK);
@@ -367,7 +370,6 @@ void __attribute__((noreturn)) sd_boot() {
     uint8_t line_start = 0;
     char dir[64] = "/FOLDER/";
     file_descriptor_t dirfd = fat_fns.opendir(&fs, dir);
-    uint32_t cluster;
     const uint8_t line_spacing = 30;
     uint8_t selected = 0;
     while(1) {
@@ -544,7 +546,7 @@ void __attribute__((noreturn)) run_interactive() {
   func();
 }
 
-void main() {
+int main() {
   // check if extreset
   if ((MCUSR & _BV(EXTRF)) == 0) {
     app_reboot();
@@ -565,4 +567,5 @@ void main() {
   RAMPZ = 1;
 
   run_interactive();
+  __builtin_unreachable();
 }

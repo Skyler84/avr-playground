@@ -18,7 +18,6 @@ void __attribute__((noinline)) encoder_irq() {
   cli();
   static uint8_t last_state = 0;
   uint8_t state = (ENCODER_PIN & (_BV(PHA_BIT) | _BV(PHB_BIT))) >> PHA_BIT;
-  uint8_t diff = state ^ last_state;
 
   static const __flash1 int8_t lut[16] = {
      0,  1, -1,  0,

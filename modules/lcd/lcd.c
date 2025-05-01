@@ -27,7 +27,6 @@ static uint8_t read_data() {
 }
 
 #else
-#pragma optimize(3)
 static void NOINLINE write_cmd(uint8_t cmd) {
   RS_lo();
   WRITE(cmd);

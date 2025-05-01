@@ -74,9 +74,9 @@ int8_t gui_msgboxP(GUI_t *gui, const char *msg, enum msgbox_type_t type)
         .y2 = 120 + boxh / 2,
     };
     gui->display->fns->region_set(gui->display, region);
-    gui->display->fns->fill(gui->display, 0x65bd, boxw * boxh);
-    int len = my_strlen_P(msg);
-    lcd_display_stringP(160 - 3 * len, 0, 100 - 4, 1, fonts_get_default(), &fonts_fns, msg, 0xFFFF);
+    gui->display->fns->fill(gui->display, 0x65bd, (boxw * boxh) & ~3);
+    // int len = my_strlen_P(msg);
+    // lcd_display_stringP(160 - 3 * len, 0, 100 - 4, 1, fonts_get_default(), &fonts_fns, msg, 0xFFFF);
     uint8_t btn_count = 0;
     for (uint8_t i = 0; i < 3; i++)
     {
@@ -92,7 +92,14 @@ int8_t gui_msgboxP(GUI_t *gui, const char *msg, enum msgbox_type_t type)
     {
         uint8_t x = 160 - (btn_count - 1) * spacing / 2 + i * spacing;
         uint8_t btn_id = pgm_read_byte_elpm(&btn_strings[type][i]);
-        lcd_fill_rectangle(x - w / 2, x + w / 2, 140, 150, 0x65bd);
+        display_region_t region = {
+            .x1 = x - w / 2,
+            .x2 = x + w / 2,
+            .y1 = 140,
+            .y2 = 150,
+        };
+        gui->display->fns->region_set(x - w / 2, x + w / 2, 140, 150,  0x65bd);
+        gui->display->fns->fill(gui->display, 0x65bd, (w * 10) & ~3);
         if (btn_id > 7)
             continue;
         const char *s = pgm_read_word_elpm(&strings[btn_id]);

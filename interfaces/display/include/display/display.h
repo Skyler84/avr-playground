@@ -29,8 +29,8 @@ typedef struct display_region{
     display_ycoord_t y2;
 }display_region_t;
 
-typedef struct display_fns display_fns_t;
 typedef struct display display_t;
+
 
 #define DISPLAY_FUNCTION_INTERFACE(modname, o) \
     o(modname, init, void) \
@@ -47,3 +47,4 @@ MODULE_DECLARE_FNS(display, DISPLAY_FUNCTION_INTERFACE);
 struct display{
     display_fns_t *fns;
 };
+  

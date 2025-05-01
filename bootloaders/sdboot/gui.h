@@ -1,9 +1,10 @@
 #pragma once
 
-#include "fs.h"
+#include "fs/fs.h"
+#include "display/display.h"
 
 typedef struct GUI{
-
+    display_t *display;
 } GUI_t;
 
 enum msgbox_type_t {

@@ -15,3 +15,9 @@ target_link_modules(lcd
         module
         fonts
 )
+target_link_libraries(lcd
+    PUBLIC
+        display
+        blockdev
+        fs
+)

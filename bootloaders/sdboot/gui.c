@@ -1,7 +1,7 @@
 #include "gui.h"
-#include "display.h"
-#include "pic.h"
-#include "fonts.h"
+#include "display/display.h"
+#include "module/pic.h"
+#include "fonts/fonts.h"
 #include "encoder.h"
 #include "buttons.h"
 #include <stdint.h>
@@ -27,7 +27,7 @@ const char s_continue[] PROGMEM = "Continue";
 const char s_abort[] PROGMEM = "Abort";
 const char s_ignore[] PROGMEM = "Ignore";
 
-const char *strings[] PROGMEM = {
+const char * const strings[] PROGMEM = {
     s_ok,
     s_cancel,
     s_yes,
@@ -50,6 +50,7 @@ const uint8_t btn_strings[7][3] PROGMEM = {
 
 void gui_init(GUI_t *gui)
 {
+    (void)gui;
     // initialize buttons
     DDRE &= ~0x80;
     PORTE |= 0x80;
@@ -60,12 +61,20 @@ void gui_init(GUI_t *gui)
     encoder_init();
 }
 
-int8_t gui_msgboxP(gui,GUI_t *gui, const char *msg, enum msgbox_type_t type)
+int8_t gui_msgboxP(GUI_t *gui, const char *msg, enum msgbox_type_t type)
 {
+    (void)gui;
     type = 0;
     display_xcoord_t boxw = 200;
     display_ycoord_t boxh = 80;
-    lcd_fill_rectangle(160 - boxw / 2, 160 + boxw / 2, 120 - boxh / 2, 120 + boxh / 2, BLUE);
+    display_region_t region = {
+        .x1 = 160 - boxw / 2,
+        .x2 = 160 + boxw / 2,
+        .y1 = 120 - boxh / 2,
+        .y2 = 120 + boxh / 2,
+    };
+    gui->display->fns->region_set(gui->display, region);
+    gui->display->fns->fill(gui->display, 0x65bd, boxw * boxh);
     int len = my_strlen_P(msg);
     lcd_display_stringP(160 - 3 * len, 0, 100 - 4, 1, fonts_get_default(), &fonts_fns, msg, 0xFFFF);
     uint8_t btn_count = 0;
@@ -97,7 +106,7 @@ extern fonts_fns_t fonts_fns;
 
 int8_t gui_choose_file(GUI_t *gui, FileSystem_t *fs, const char *path)
 {
-
+    (void)gui;
     FileInfo_t info;
     fstatus_t ret;
     int8_t selection = 0;

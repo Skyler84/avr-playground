@@ -7,17 +7,19 @@ target_sources(sdboot
     PRIVATE
         main.c
         encoder.c
+        buttons.c
+        gui.c
 )
 
 target_link_modules(sdboot
     PRIVATE
         fonts
-        lcd
         sd
         fat
-)
+        )
 target_link_libraries(sdboot
     PRIVATE
+        lcd
         module
 )
 

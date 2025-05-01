@@ -1,4 +1,6 @@
 #include "buttons.h"
+#include <avr/io.h>
+#include <util/delay.h>
 
 struct btn_t
 {
@@ -14,17 +16,17 @@ static struct btn_t btns[] = {
     {&PINC, 0x20}, // BTN_S
 };
 
-int8_t is_button_pressed(uint8_t btn_id)
+int8_t is_button_pressed(enum btn_id_t btn_id)
 {
     return !(*(btns[btn_id].port) & btns[btn_id].bit);
 }
 
-int8_t is_button_released(uint8_t btn_id)
+int8_t is_button_released(enum btn_id_t btn_id)
 {
     return !is_button_pressed(btn_id);
 }
 
-int8_t button_clicked(uint8_t btn_id)
+int8_t button_clicked(enum btn_id_t btn_id)
 {
     // check if button is clicked
     if (is_button_released(btn_id))
@@ -35,9 +37,9 @@ int8_t button_clicked(uint8_t btn_id)
     return 1;
 }
 
-void wait_button_press(uint8_t btn_id)
+void wait_button_press(enum btn_id_t btn_id)
 {
-    int timeout;
+    int timeout = 0;
     while (timeout++ < 100)
     {
         // wait for button press
@@ -47,10 +49,9 @@ void wait_button_press(uint8_t btn_id)
     }
 }
 
-void wait_button_release(uint8_t btn_id)
+void wait_button_release(enum btn_id_t btn_id)
 {
-
-    int timeout;
+    int timeout = 0;
     while (timeout++ < 100)
     {
         // wait for button release
@@ -60,7 +61,7 @@ void wait_button_release(uint8_t btn_id)
     }
 }
 
-void wait_button_click(uint8_t btn_id)
+void wait_button_click(enum btn_id_t btn_id)
 {
     // wait for button press
     wait_button_press(btn_id);

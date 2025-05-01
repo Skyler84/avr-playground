@@ -53,8 +53,8 @@ typedef enum modname##_function_id_t{\
   typedef returns (*modname##_##name##_fn_t)(__VA_ARGS__);
 
 // Declare function pointer typedefs
+exports(modname, MODULE_ENUM_FN_TYPE)
 #define MODULE_DECLARE_FN_TYPES(modname, exports)\
-  exports(modname, MODULE_ENUM_FN_TYPE)
 
 #define MODULE_DEFINE_FN(modname, name, returns, ...)\
   returns modname##_##name(__VA_ARGS__)

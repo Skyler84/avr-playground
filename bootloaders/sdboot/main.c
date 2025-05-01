@@ -80,7 +80,7 @@ void __attribute__((noreturn)) bl_reboot() {
 
 void __attribute__((noreturn)) error() {
   gui_msgboxP(&gui,PSTR("Please eject card"), MSGBOX_OK);
-  while(sd_detected()) wdt_reset();
+  while(sd_fns.detected()) wdt_reset();
   // reboot bootloader?
   bl_reboot();
 }
@@ -189,15 +189,15 @@ void __attribute__((noreturn)) sd_boot() {
   lcd_fns.fill_rectangle(0, 320, 0, 240, BLACK);
   sd_fns.preinit();  
 
-  if (!sd_detected()) {
+  if (!sd_fns.detected()) {
     gui_msgboxP(&gui,PSTR("Insert card"), MSGBOX_OK);
-    while(!sd_detected()) {
+    while(!sd_fns.detected()) {
       // wait for card to be inserted
       _delay_ms(100);
     }
   }
   {
-    if (sd_initialise() != 0) {
+    if (sd_fns.initialise() != 0) {
       gui_msgboxP(&gui,PSTR("Error initializing card"), MSGBOX_OK);
       goto end;
     }

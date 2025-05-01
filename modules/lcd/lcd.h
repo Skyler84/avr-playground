@@ -1,6 +1,6 @@
 #pragma once
 
-#include "display.h"
+#include "display/display.h"
 #include "module/module.h"
 #include "fonts/fonts.h"
 

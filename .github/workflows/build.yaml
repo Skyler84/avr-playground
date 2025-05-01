@@ -9,7 +9,7 @@ jobs:
     strategy:
       matrix:
         board: [lafortuna, ilmatto]
-        avr-gcc-version: ["v14.2.0", "v13.2.0", "v12.3.0", "v12.2.0", "v11.2.0", "v10.2.0", "v9.2.0", "v9.1.0"]
+        avr_gcc_version: ["v14.2.0", "v13.2.0", "v12.3.0", "v12.2.0", "v11.2.0", "v10.2.0", "v9.2.0", "v9.1.0"]
     runs-on: ubuntu-latest
     steps:
       - name: install build toolchain

@@ -9,6 +9,7 @@ jobs:
     strategy:
       matrix:
         board: [lafortuna, ilmatto]
+        avr-gcc-version: ["v14.2.0", "v13.2.0", "v12.3.0", "v12.2.0", "v11.2.0", "v10.2.0", "v9.2.0", "v9.1.0"]
     runs-on: ubuntu-latest
     steps:
       - name: install build toolchain
@@ -26,7 +27,7 @@ jobs:
       - name: download prebuilt avr-gcc
         if: steps.cache-compiler.outputs.cache-hit != 'true'
         run: | 
-          wget https://github.com/modm-io/avr-gcc/releases/download/v14.2.0/modm-avr-gcc.tar.bz2
+          wget https://github.com/modm-io/avr-gcc/releases/download/${{matrix.avr_gcc_version}}/modm-avr-gcc.tar.bz2
           mkdir opt
           tar xf modm-avr-gcc.tar.bz2 --directory ${{github.workspace}}/opt
       - name: enable prebuilt avr-gcc
@@ -50,7 +51,7 @@ jobs:
       - name: upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: files-${{matrix.board}}
+          name: files-${{matrix.board}}-avr-gcc-${{matrix.avr-gcc-version}}
           path: |
             build_${{matrix.board}}/**/*.hex
             build_${{matrix.board}}/**/*.eep

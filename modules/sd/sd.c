@@ -49,7 +49,6 @@ static uint8_t spi_tx_rx_byte(uint8_t byte) {
 
 static uint8_t sdcard_calc_crc(uint8_t cmd, uint32_t args) {
   // calculate crc
-  uint8_t crc = 0x00;
   uint64_t data = ((uint64_t)cmd|0x40)<<40 | args<<8;
   for (int i = 40; i > 0; i--) {
     if ((data >> i) & 0x80) {

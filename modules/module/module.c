@@ -1,21 +1,22 @@
-#include "module.h"
+#include "module/module.h"
 
 #include <avr/pgmspace.h>
+#include <stddef.h>
 
 extern module_fn_t module_fn_table_default[] __attribute__((weak));
 
-fn_ptr_t module_fn_lookup(uint16_t _id, module_t* module) {
+fn_ptr_t module_fn_lookup(uint16_t _id, moduleptr_t module) {
   const module_fn_t *fn;
-  if (module == NULL) {
+  if (module == 0) {
     fn = module_fn_table_default;
   } else {
-    fn = module->fn_table;
+    fn = (module_fn_t*)pgm_read_word_far(module + offsetof(module_t, fn_table));
   }
   if (fn == NULL) {
     return NULL;
   }
   uint16_t id;
-  while (id = pgm_read_word(&fn->id)) {
+  while ((id = pgm_read_word(&fn->id)) != 0x0000U) {
     if (id == _id) {
       return (fn_ptr_t)(pgm_read_word(&fn->fn) + pgm_ptr_to_fn_ptr(module));
     }
@@ -24,26 +25,28 @@ fn_ptr_t module_fn_lookup(uint16_t _id, module_t* module) {
   return NULL;
 }
 
-module_t *module_next(module_t* module) {
-  uintptr_t addr = (uintptr_t)module;
+moduleptr_t module_next(moduleptr_t module) {
+  moduleptr_t addr = (moduleptr_t)module & ~1;
   do{
     addr += 2;
-    module_t *mod = (module_t*)addr;
-    if (mod->magic == AVR_MODULE_MAGIC) {
+    moduleptr_t mod = (moduleptr_t)addr;
+    uint32_t magic = pgm_read_dword_far(addr);
+    if (magic == AVR_MODULE_MAGIC) {
       return mod;
     }
   } while(addr && addr < 0x10000);
-  return NULL;
+  return (moduleptr_t)0;
 }
 
-module_t *module_find_by_id(module_id_t id) {
-  for (uint32_t addr = 0; addr < 0x10000; addr+=2) {
-    module_t *mod = (module_t*)addr;
-    if (mod->magic == AVR_MODULE_MAGIC && mod->id == id) {
-      return mod;
+moduleptr_t module_find_by_id(module_id_t id) {
+  moduleptr_t module = (moduleptr_t)0x0000;
+  while ((module = module_next(module)) != 0) {
+    uint16_t mod_id = pgm_read_word_far(module + offsetof(module_t, id));
+    if (mod_id == id) {
+      return module;
     }
   }
-  return NULL;
+  return (moduleptr_t)0;
 }
 
 // REGISTER_MODULE(module, MODULE_ID, MODULE_FUNCTION_EXPORTS, MODULE_API_VER);

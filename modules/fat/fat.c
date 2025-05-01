@@ -19,7 +19,7 @@ MODULE_FN_PROTOS(fat, FAT_FUNCTION_EXPORTS)
 static FAT_SectorCache_t* fat_cache_sector(FAT_FileSystem_t *fs, uint32_t sector) {
   for (uint8_t i = 0; i < 1; i++) {
     if (fs->cache[i].sector_num == sector) {
-      if (fs->cache[i].usage_count <= 255)
+      if (fs->cache[i].usage_count < 255)
         fs->cache[i].usage_count++;
       return &fs->cache[i];
     }
@@ -44,18 +44,18 @@ static FAT_SectorCache_t* fat_cache_sector(FAT_FileSystem_t *fs, uint32_t sector
   return cache;
 }
 
-static void fat_write_sector(FAT_FileSystem_t *fs, uint32_t sector) {
-  FAT_SectorCache_t *cache = NULL;
-  for (uint8_t i = 0; i < 1; i++) {
-    if (fs->cache[i].sector_num == sector) {
-      cache = &fs->cache[i];
-      break;
-    }
-  }
-  if (cache == NULL) return;
-  cache->dirty = true;
-  cache->usage_count++;
-}
+// static void fat_write_sector(FAT_FileSystem_t *fs, uint32_t sector) {
+//   FAT_SectorCache_t *cache = NULL;
+//   for (uint8_t i = 0; i < 1; i++) {
+//     if (fs->cache[i].sector_num == sector) {
+//       cache = &fs->cache[i];
+//       break;
+//     }
+//   }
+//   if (cache == NULL) return;
+//   cache->dirty = true;
+//   cache->usage_count++;
+// }
 
 static void fat_flush_sector(FAT_FileSystem_t *fs, uint32_t sector) {
   FAT_SectorCache_t *cache = fat_cache_sector(fs, sector);
@@ -65,12 +65,12 @@ static void fat_flush_sector(FAT_FileSystem_t *fs, uint32_t sector) {
   }
 }
 
-static uint32_t fat_root_start_sector(FAT_FileSystem_t *fs) {
-  uint32_t reserved_sectors = fs->reserved_sectors;
-  uint32_t num_FATs = fs->num_FATs;
-  uint32_t sectors_per_FAT = fs->sectors_per_FAT;
-  return reserved_sectors + (num_FATs * sectors_per_FAT);
-}
+// static uint32_t fat_root_start_sector(FAT_FileSystem_t *fs) {
+//   uint32_t reserved_sectors = fs->reserved_sectors;
+//   uint32_t num_FATs = fs->num_FATs;
+//   uint32_t sectors_per_FAT = fs->sectors_per_FAT;
+//   return reserved_sectors + (num_FATs * sectors_per_FAT);
+// }
 
 static uint32_t fat_data_start_sector(FAT_FileSystem_t *fs) {
   uint32_t reserved_sectors = fs->reserved_sectors;
@@ -193,6 +193,9 @@ void fat_init(FAT_FileSystem_t *fs, BlockDev *bd)
 
 fstatus_t fat_mount(FAT_FileSystem_t *fs, bool readonly, bool mkfs) 
 {
+  (void)readonly;
+  (void)mkfs;
+  
   if (fs->bd == NULL) {
     return -3; // not initialized
   }
@@ -205,24 +208,22 @@ fstatus_t fat_mount(FAT_FileSystem_t *fs, bool readonly, bool mkfs)
   }
   BPB2_t *bpb2 = (BPB2_t*)(&cache->sector_data[0x0b]);
   BPB3_31_t *bpb3 = (BPB3_31_t*)(&cache->sector_data[0x0b]);
-  EBPB_t *ebpb = (EBPB_t*)(&cache->sector_data[0x0b]);
   FAT32EBPB_t *fat32ebpb = (FAT32EBPB_t*)(&cache->sector_data[0x0b]);
   
   uint8_t sectors_per_cluster = bpb2->sectors_per_cluster;
   uint32_t total_sectors = bpb2->total_sectors_16;
-  uint32_t bytes_per_sector = bpb2->bytes_per_sector;
+  // uint32_t bytes_per_sector = bpb2->bytes_per_sector;
   if (total_sectors == 0) {
     total_sectors = bpb3->total_sectors_32;
   }
   uint32_t reserved_sectors = bpb2->reserved_sectors;
   uint8_t num_fats = bpb2->num_fats;
-  uint32_t fat_sectors = bpb2->sectors_per_fat;;
+  uint32_t fat_sectors = bpb2->sectors_per_fat;
   if (fat_sectors == 0)
-    fat_sectors = fat32ebpb->sectors_per_fat;;
-  uint32_t root_dir_start_sector = reserved_sectors + fat_sectors;
-  uint32_t root_dir_sectors = (bpb2->root_entries * 32 + bytes_per_sector - 1) / bytes_per_sector;
-  uint32_t data_start_sector = root_dir_start_sector + root_dir_sectors;
-  uint32_t data_sectors = total_sectors - data_start_sector;
+    fat_sectors = fat32ebpb->sectors_per_fat;
+  // uint32_t root_dir_start_sector = reserved_sectors + fat_sectors;
+  // uint32_t root_dir_sectors = (bpb2->root_entries * 32 + bytes_per_sector - 1) / bytes_per_sector;
+  // uint32_t data_start_sector = root_dir_start_sector + root_dir_sectors;
 
   fs->sectors_per_cluster = sectors_per_cluster;
   fs->reserved_sectors = reserved_sectors;
@@ -233,11 +234,32 @@ err:
   cache->busy = 0;
   return ret;
 }
-void fat_umount(FAT_FileSystem_t *fs) {}
-fstatus_t fat_stat(FAT_FileSystem_t *fs, const char *filename) { return 0; }
-file_descriptor_t fat_open(FAT_FileSystem_t *fs, const char *filename, uint8_t mode) { return 0; }
+void fat_umount(FAT_FileSystem_t *fs) 
+{
+  (void)fs;
+}
+fstatus_t fat_stat(FAT_FileSystem_t *fs, const char *filename) 
+{ 
+  (void)fs;
+  (void)filename;
+
+  return 0; 
+}
+file_descriptor_t fat_open(FAT_FileSystem_t *fs, const char *filename, uint8_t mode) 
+{ 
+  (void)fs;
+  (void)filename;
+  (void)mode;
+
+  return 0; 
+}
 file_descriptor_t fat_openat(FAT_FileSystem_t *fs, file_descriptor_t dir, const char *filename, uint8_t mode) 
 { 
+  (void)fs;
+  (void)dir;
+  (void)filename;
+  (void)mode;
+  
   return 0; 
 }
 void fat_close(FAT_FileSystem_t *fs, file_descriptor_t fd) 
@@ -250,7 +272,14 @@ void fat_close(FAT_FileSystem_t *fs, file_descriptor_t fd)
   fs->handles[fd].size = 0;
   fat_flush_sector(fs, fs->handles[fd].cluster_chain.cluster.sector_start);
 }
-fstatus_t fat_seek(FAT_FileSystem_t *fs, file_descriptor_t fd, uint32_t offset) { return 0; }
+fstatus_t fat_seek(FAT_FileSystem_t *fs, file_descriptor_t fd, uint32_t offset) 
+{ 
+  (void)fs;
+  (void)fd;
+  (void)offset;
+
+  return 0; 
+}
 fstatus_t fat_read(FAT_FileSystem_t *fs, file_descriptor_t fd, char *_buf, uint16_t size) 
 { 
   if (fs->handles[fd].handle_type != 1) {
@@ -280,11 +309,40 @@ fstatus_t fat_read(FAT_FileSystem_t *fs, file_descriptor_t fd, char *_buf, uint1
   } while (size && (fs->handles[fd].cluster_chain.cluster.current_cluster & 0x0ffffff8ul) != 0x0ffffff8ul);
   return buf - _buf; 
 }
-fstatus_t fat_write(FAT_FileSystem_t *fs, file_descriptor_t fd, const char *buf, uint16_t size) { return 0; }
-fstatus_t fat_unlink(FAT_FileSystem_t *fs, const char *filename) { return 0; }
-fstatus_t fat_rename(FAT_FileSystem_t *fs, const char *oldname, const char *newname) { return 0; }
-void fat_mkdir(FAT_FileSystem_t *fs, const char *dirname) {}
-void fat_rmdir(FAT_FileSystem_t *fs, const char *dirname) {}
+fstatus_t fat_write(FAT_FileSystem_t *fs, file_descriptor_t fd, const char *buf, uint16_t size) 
+{ 
+  (void)fs;
+  (void)fd;
+  (void)buf;
+  (void)size;
+
+  return 0; 
+}
+fstatus_t fat_unlink(FAT_FileSystem_t *fs, const char *filename) 
+{ 
+  (void)fs;
+  (void)filename;
+
+  return 0; 
+}
+fstatus_t fat_rename(FAT_FileSystem_t *fs, const char *oldname, const char *newname) 
+{ 
+  (void)fs;
+  (void)oldname;
+  (void)newname;
+
+  return 0; 
+}
+void fat_mkdir(FAT_FileSystem_t *fs, const char *dirname) 
+{
+  (void)fs;
+  (void)dirname;
+}
+void fat_rmdir(FAT_FileSystem_t *fs, const char *dirname) 
+{
+  (void)fs;
+  (void)dirname;
+}
 
 file_descriptor_t fat_opendir(FAT_FileSystem_t *fs, const char *dirname) 
 { 
@@ -313,8 +371,8 @@ file_descriptor_t fat_opendirat(FAT_FileSystem_t *fs, file_descriptor_t dir, con
 
   
   // first check if we have available handles
-  uint8_t i = fat_get_handle(fs);
-  if (i < 0) {
+  file_descriptor_t i = fat_get_handle(fs);
+  if (i == (file_descriptor_t)-1) {
     return i; // no available handles
   }
   
@@ -368,7 +426,7 @@ fstatus_t fat_readdir(FAT_FileSystem_t *fs, file_descriptor_t fd, struct FileInf
   while(i++<32) {
     fstatus_t ret = 32;
     fs->handles[fd].handle_type = 1;
-    ret = fat_read(fs, fd, (uint8_t*)&dir_entry, sizeof(FAT_DirectoryEntry_t));
+    ret = fat_read(fs, fd, (char*)&dir_entry, sizeof(FAT_DirectoryEntry_t));
     fs->handles[fd].handle_type = 2;
     if (ret < (long)sizeof(FAT_DirectoryEntry_t)) {  
       return -i; // error reading directory

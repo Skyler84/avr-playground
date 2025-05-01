@@ -9,6 +9,6 @@
 #define PHA_VECTOR INT4_vect
 #define PHB_VECTOR INT5_vect
 
-volatile extern int8_t encoder_dt;
+extern volatile int8_t encoder_dt;
 
 void encoder_init();

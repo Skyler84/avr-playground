@@ -6,7 +6,7 @@
 #define LED_PIN  PINB
 #define LED_BIT  PB7
 
-void main() {
+int main() {
     // set clock prescaler to 1
     CLKPR = _BV(CLKPCE); // Enable change
     CLKPR = 0; // Set prescaler to 1

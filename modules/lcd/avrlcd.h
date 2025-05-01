@@ -10,8 +10,12 @@
 #define CTRL A
 #define DATA C
 
+#ifndef CAT
 #define CAT(a, b) a ## b
+#endif
+#ifndef XCAT
 #define XCAT(a, b) CAT(a, b)
+#endif
 
 #define PORT(x) XCAT(PORT, x)
 #define DDR(x) XCAT(DDR, x)

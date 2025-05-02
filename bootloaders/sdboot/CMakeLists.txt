@@ -13,14 +13,14 @@ target_sources(sdboot
 
 target_link_modules(sdboot
     PRIVATE
+)
+target_link_libraries(sdboot
+    PRIVATE
+        module
         fonts
         sd
         fat
-        )
-target_link_libraries(sdboot
-    PRIVATE
         lcd
-        module
         gfx
 )
 

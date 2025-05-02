@@ -97,7 +97,7 @@ void gui_init(GUI_t *gui)
     __result;                               \
 }))
 
-int8_t gui_msgboxP(GUI_t *gui, const char */* msg */, enum msgbox_type_t type)
+int8_t gui_msgboxP(GUI_t *gui, const char *msg, enum msgbox_type_t type)
 {
     (void)gui;
     type = 0;

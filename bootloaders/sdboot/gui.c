@@ -112,8 +112,9 @@ int8_t gui_msgboxP(GUI_t *gui, const char */* msg */, enum msgbox_type_t type)
     MODULE_CALL(gfx, fill, gui->gfx, 0x0000);
     MODULE_CALL(gfx, nostroke, gui->gfx);
     MODULE_CALL(gfx, rectangle, gui->gfx, region);
-    // int len = my_strlen_P(msg);
-    // lcd_display_stringP(160 - 3 * len, 0, 100 - 4, 1, fonts_get_default(), &fonts_fns, msg, 0xFFFF);
+    int len = my_strlen_P(msg);
+    MODULE_CALL(gfx, stroke, gui->gfx, BLACK);
+    MODULE_CALL(gfx, textP, gui->gfx, ((display_region_t){160 - 3 * len, 0, 0, 20}), msg);
     uint8_t btn_count = 0;
     for (uint8_t i = 0; i < 3; i++)
     {
@@ -167,9 +168,7 @@ int8_t gui_choose_file(GUI_t *gui, FileSystem_t *fs, const char */* path */)
         MODULE_CALL(gfx, fill, gui->gfx, BLACK);
         MODULE_CALL(gfx, nostroke, gui->gfx);
         MODULE_CALL(gfx, rectangle, gui->gfx, (display_region_t){0, 320, 0, 20});
-        // if (line_start > )
-        // lcd_debug_u16(0, 0, line_start);
-        // lcd_debug_u16(0, 10, selection);
+
         display_ycoord_t y = 40;
         int8_t line_no = 0;
         uint16_t colors[] = {0x045c, 0x12d1};

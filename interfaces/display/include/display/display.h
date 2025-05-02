@@ -13,9 +13,9 @@
 #define MAGENTA     0xF81F      
 #define YELLOW      0xFFE0     
 
-typedef uint16_t display_xcoord_t;
-typedef uint16_t display_ycoord_t;
-typedef uint16_t display_colour_t;
+typedef int16_t display_xcoord_t;
+typedef int16_t display_ycoord_t;
+typedef int16_t display_colour_t;
 
 typedef struct display_coord{
     display_xcoord_t x;

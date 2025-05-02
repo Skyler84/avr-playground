@@ -31,8 +31,15 @@
 
  #define MODULE_DEFINE_TRAMPOLINES(modname, exports) \
      exports(modname, MODULE_TRAMPOLINE_FN)
-
-#define MODULE_CALL(modname, name, funcs, ...) \
-    ((modname##_fns_t*)funcs)->name(__VA_ARGS__)
-
 */
+
+#define MODULE_CALL_STATIC(modname, name, this, ...) \
+    modname##_##name((this)__VA_OPT__(,) __VA_ARGS__)
+
+#define MODULE_CALL_INTERFACE MODULE_CALL_STATIC
+
+#define MODULE_CALL_MODULE(modname, name, this, ...) \
+    ((modname##_fns_t*)(this)->fns)->name((this)__VA_OPT__(,) __VA_ARGS__)
+
+#define MODULE_CALL(modname, name, this, ...) \
+  XCAT(MODULE_CALL_, XCAT(modname,_MODTYPE))(modname, name, this,__VA_ARGS__)

@@ -1,11 +1,14 @@
 #include "gui.h"
 #include "display/display.h"
+#include "module/imports.h"
 #include "module/pic.h"
 #include "fonts/fonts.h"
+#include "gfx/gfx.h"
 #include "encoder.h"
 #include "buttons.h"
 #include <stdint.h>
 #include <avr/pgmspace.h>
+#include <util/delay.h>
 
 
 static size_t my_strlen_P(const char __flash1 *s)
@@ -61,20 +64,54 @@ void gui_init(GUI_t *gui)
     encoder_init();
 }
 
-int8_t gui_msgboxP(GUI_t *gui, const char *msg, enum msgbox_type_t type)
+#define pgm_read_byte_elpm(addr)   \
+(__extension__({                \
+    uint16_t __addr16 = (uint16_t)(addr); \
+    uint8_t __result;           \
+    __asm__ __volatile__        \
+    (                           \
+        "elpm" "\n\t"           \
+        "mov %0, r0" "\n\t"     \
+        : "=r" (__result)       \
+        : "z" (__addr16)        \
+        : "r0"                  \
+    );                          \
+    __result;                   \
+}))
+
+#define pgm_read_word_elpm(addr)         \
+(__extension__({                            \
+    uint16_t __addr16 = (uint16_t)(addr);   \
+    uint16_t __result;                      \
+    __asm__ __volatile__                    \
+    (                                       \
+        "elpm"           "\n\t"              \
+        "mov %A0, r0"   "\n\t"              \
+        "adiw r30, 1"   "\n\t"              \
+        "elpm"           "\n\t"              \
+        "mov %B0, r0"   "\n\t"              \
+        : "=r" (__result), "=z" (__addr16)  \
+        : "1" (__addr16)                    \
+        : "r0"                              \
+    );                                      \
+    __result;                               \
+}))
+
+int8_t gui_msgboxP(GUI_t *gui, const char */* msg */, enum msgbox_type_t type)
 {
     (void)gui;
     type = 0;
     display_xcoord_t boxw = 200;
     display_ycoord_t boxh = 80;
-    display_region_t region = {
+    gfx_region_t region = {
         .x1 = 160 - boxw / 2,
         .x2 = 160 + boxw / 2,
         .y1 = 120 - boxh / 2,
         .y2 = 120 + boxh / 2,
     };
-    gui->display->fns->region_set(gui->display, region);
-    gui->display->fns->fill(gui->display, 0x65bd, (boxw * boxh) & ~3);
+    MODULE_CALL(gfx, fill, gui->gfx, 0x0000);
+    MODULE_CALL(gfx, nostroke, gui->gfx);
+    MODULE_CALL(gfx, rectangle, gui->gfx, region);
     // int len = my_strlen_P(msg);
     // lcd_display_stringP(160 - 3 * len, 0, 100 - 4, 1, fonts_get_default(), &fonts_fns, msg, 0xFFFF);
     uint8_t btn_count = 0;
@@ -98,12 +135,13 @@ int8_t gui_msgboxP(GUI_t *gui, const char *msg, enum msgbox_type_t type)
             .y1 = 140,
             .y2 = 150,
         };
-        gui->display->fns->region_set(x - w / 2, x + w / 2, 140, 150,  0x65bd);
-        gui->display->fns->fill(gui->display, 0x65bd, (w * 10) & ~3);
+        MODULE_CALL(gfx, fill, gui->gfx, 0x65bd);
+        MODULE_CALL(gfx, rectangle, gui->gfx, region);
         if (btn_id > 7)
             continue;
-        const char *s = pgm_read_word_elpm(&strings[btn_id]);
-        lcd_display_stringP(x - 3 * my_strlen_P(s), 0, 141, 1, fonts_get_default(), &fonts_fns, s, 0xFFFF);
+        const char *s = (const char*)pgm_read_word_elpm(&strings[btn_id]);
+        MODULE_CALL(gfx, stroke, gui->gfx, BLACK);
+        MODULE_CALL(gfx, textP, gui->gfx, ((display_region_t){x-3*my_strlen_P(s), 141, 0, 150}), s);
     }
     wait_button_click(0);
     return 0;
@@ -111,7 +149,7 @@ int8_t gui_msgboxP(GUI_t *gui, const char *msg, enum msgbox_type_t type)
 
 extern fonts_fns_t fonts_fns;
 
-int8_t gui_choose_file(GUI_t *gui, FileSystem_t *fs, const char *path)
+int8_t gui_choose_file(GUI_t *gui, FileSystem_t *fs, const char */* path */)
 {
     (void)gui;
     FileInfo_t info;
@@ -120,13 +158,15 @@ int8_t gui_choose_file(GUI_t *gui, FileSystem_t *fs, const char *path)
     uint8_t num_lines = 6;
     uint8_t line_start = 0;
     char dir[64] = "/FOLDER/";
-    file_descriptor_t dirfd = fs->fns->opendir(&fs, dir);
-    uint32_t cluster;
+    file_descriptor_t dirfd = MODULE_CALL(fs, open, fs, dir, O_RDONLY | O_DIRECTORY);
+    // uint32_t cluster;
     const uint8_t line_spacing = 30;
     uint8_t selected = 0;
     while (1)
     {
-        lcd_fill_rectangle(0, 320, 0, 20, BLACK);
+        MODULE_CALL(gfx, fill, gui->gfx, BLACK);
+        MODULE_CALL(gfx, nostroke, gui->gfx);
+        MODULE_CALL(gfx, rectangle, gui->gfx, (display_region_t){0, 320, 0, 20});
         // if (line_start > )
         // lcd_debug_u16(0, 0, line_start);
         // lcd_debug_u16(0, 10, selection);
@@ -137,7 +177,7 @@ int8_t gui_choose_file(GUI_t *gui, FileSystem_t *fs, const char *path)
         {
             // get FileInfo of selected item
             fs->fns->seek(&fs, dirfd, 0);
-            while (selected-- && (ret = fs->fns->getdents(&fs, dirfd, &info, 1)) == 1)
+            while (selected-- && (ret = fs->fns->getdirents(&fs, dirfd, &info, 1)) == 1)
             {
                 // do nothing
             }
@@ -155,13 +195,13 @@ int8_t gui_choose_file(GUI_t *gui, FileSystem_t *fs, const char *path)
             else if (info.type == 2)
             {
                 // directory
-                file_descriptor_t newdirfd = fat_fns.opendirat(&fs, dirfd, info.name);
+                file_descriptor_t newdirfd = MODULE_CALL(fs, openat, fs, dirfd, info.name, O_RDONLY  | O_DIRECTORY);
                 if (newdirfd < 0)
                 {
                     gui_msgboxP(gui,PSTR("Error opening directory"), MSGBOX_OK);
                     goto end;
                 }
-                fat_fns.closedir(&fs, dirfd);
+                MODULE_CALL(fs, close, fs, dirfd);
                 dirfd = newdirfd;
                 if (dirfd < 0)
                 {
@@ -183,9 +223,10 @@ int8_t gui_choose_file(GUI_t *gui, FileSystem_t *fs, const char *path)
             display_ycoord_t y = 40 + ln * line_spacing;
             display_ycoord_t ys = y - (line_spacing - 16) / 2;
             display_ycoord_t ye = y + (line_spacing + 1 + 16) / 2;
-            lcd_fill_rectangle(10, 309, ys, ye, colors[ln % 2]);
+            MODULE_CALL(gfx, fill, gui->gfx, colors[ln % 2]);
+            MODULE_CALL(gfx, rectangle, gui->gfx, (display_region_t){10, 309, ys, ye});
         }
-        while ((ret = fat_fns.readdir(&fs, dirfd, &info)) == 0)
+        while ((ret = MODULE_CALL(fs, getdirents, fs, dirfd, &info, 1)) == 1)
         {
             if (line_no < line_start)
             {
@@ -197,10 +238,11 @@ int8_t gui_choose_file(GUI_t *gui, FileSystem_t *fs, const char *path)
                 line_no++;
                 continue;
             }
-            lcd_display_string(40, 0, y, 2, fonts_get_default(), &fonts_fns, info.name, 0xFFFF);
+            MODULE_CALL(gfx, stroke, gui->gfx, WHITE);
+            MODULE_CALL(gfx, text, gui->gfx, ((display_region_t){40, y, 0, y}), info.name);
             if (line_no == selection)
             {
-                lcd_display_char(20, y, 2, fonts_get_default(), &fonts_fns, '>', WHITE);
+                MODULE_CALL(gfx, text, gui->gfx, ((display_region_t){20, y, 0, y}), ">");
             }
             y += 30;
             line_no++;

@@ -21,6 +21,7 @@ target_link_libraries(sdboot
     PRIVATE
         lcd
         module
+        gfx
 )
 
 set_target_properties(sdboot PROPERTIES 

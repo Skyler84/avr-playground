@@ -34,7 +34,7 @@ moduleptr_t module_next(moduleptr_t module) {
     if (magic == AVR_MODULE_MAGIC) {
       return mod;
     }
-  } while(addr && addr < 0x10000);
+  } while(addr && addr < 0x20000);
   return (moduleptr_t)0;
 }
 
@@ -49,4 +49,4 @@ moduleptr_t module_find_by_id(module_id_t id) {
   return (moduleptr_t)0;
 }
 
-// REGISTER_MODULE(module, MODULE_ID, MODULE_FUNCTION_EXPORTS, MODULE_API_VER);
+REGISTER_MODULE(module, MODULE_MODULE_ID, MODULE_FUNCTION_EXPORTS, MODULE_API_VER);

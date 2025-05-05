@@ -79,6 +79,24 @@ typedef struct FAT_SectorCache {
   uint8_t sector_data[512];
 } FAT_SectorCache_t;
 
+typedef struct FAT_Handle {
+  uint8_t handle_type; // 0 = none, 1 = file, 2 = directory
+  ClusterChain_t cluster_chain;
+  uint32_t sector_offset;
+  uint32_t size;
+  union {
+    struct {
+      uint32_t current_cluster;
+      uint32_t current_offset;
+      uint32_t file_size;
+    } file;
+    struct {
+      uint32_t current_cluster;
+      uint32_t current_offset;
+    } directory;
+  };
+} FAT_Handle_t;
+
 typedef struct FAT_FileSystem {
   FileSystem_t fs;
   const BlockDev *bd;
@@ -89,23 +107,7 @@ typedef struct FAT_FileSystem {
   uint32_t sectors_per_cluster;
   uint32_t root_entries;
   uint32_t root_cluster;
-  struct {
-    uint8_t handle_type; // 0 = none, 1 = file, 2 = directory
-    ClusterChain_t cluster_chain;
-    uint32_t sector_offset;
-    uint32_t size;
-    union {
-      struct {
-        uint32_t current_cluster;
-        uint32_t current_offset;
-        uint32_t file_size;
-      } file;
-      struct {
-        uint32_t current_cluster;
-        uint32_t current_offset;
-      } directory;
-    };
-  } handles[4];
+  FAT_Handle_t handles[4];
 } FAT_FileSystem_t;
 
 typedef struct {

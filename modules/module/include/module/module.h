@@ -122,8 +122,6 @@ typedef struct modname##_fns_t{\
   o(modname, next, moduleptr_t, moduleptr_t)\
   o(modname, find_by_id, moduleptr_t, module_id_t)
 
-#define MOD_CALL(modname, this, fname) \
-  (((modname##_fns_t*)this)->fname)
 
 #define MODULE_API_VER 0x0001
 #define MODULE_MODULE_ID 0x0000

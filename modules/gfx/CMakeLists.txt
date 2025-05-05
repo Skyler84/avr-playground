@@ -1,23 +1,21 @@
-add_module(lcd)
-target_sources(lcd
+add_module(gfx)
+target_sources(gfx
     PRIVATE
-        lcd.c
+        gfx.c
 )
-target_include_directories(lcd
+target_include_directories(gfx
     PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/include
     PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
-target_link_modules(lcd
+target_link_modules(gfx
     PRIVATE
         module
         fonts
 )
-target_link_libraries(lcd
+target_link_libraries(gfx
     PUBLIC
         display
-        blockdev
-        fs
 )

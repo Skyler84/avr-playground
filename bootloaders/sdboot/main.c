@@ -11,6 +11,9 @@
 
 #include "main.h"
 #include "encoder.h"
+#include "buttons.h"
+#include "gui.h"
+
 #include "module/imports.h"
 #include "fonts/fonts.h"
 #include "lcd/lcd.h"
@@ -22,26 +25,10 @@ MODULE_IMPORT_FUNCTIONS(fonts, FONTS_MODULE_ID, FONTS_FUNCTION_EXPORTS)
 MODULE_IMPORT_FUNCTIONS(lcd, LCD_MODULE_ID, LCD_FUNCTION_EXPORTS)
 MODULE_IMPORT_FUNCTIONS(sd, SD_MODULE_ID, SD_FUNCTION_EXPORTS)
 
-enum btn_id_t {
-  BTN_C = 0,
-  BTN_N,
-  BTN_E, 
-  BTN_S,
-  BTN_W,
-};
-
-struct btn_t {
-  volatile uint8_t *port;
-  uint8_t bit;
-};
-
-static struct btn_t btns[] = {
-  {&PINE, 0x80}, // BTN_C
-  {&PINC, 0x04}, // BTN_N
-  {&PINC, 0x08}, // BTN_E
-  {&PINC, 0x10}, // BTN_W
-  {&PINC, 0x20}, // BTN_S
-};
+// asm("
+//   .org 0x1fffe\n"
+//   "  rjmp module_fn_lookup\n"
+// );
 
 
 
@@ -69,124 +56,8 @@ static BlockDev partition_bd = {
 FileSystem_fns_t fat_fs_fns;
 FAT_FileSystem_t fs;
 
-// static size_t my_strlen_P(const char __flash1 *s) {
-//   size_t len = 0;
-//   while (*s++) {
-//     len++;
-//   }
-//   return len;
-// }
+GUI_t gui;
 
-int8_t is_button_pressed(uint8_t btn_id) {
-  return !(*(btns[btn_id].port) & btns[btn_id].bit);
-}
-
-int8_t is_button_released(uint8_t btn_id) {
-  return !is_button_pressed(btn_id);
-}
-
-void wait_button_press(uint8_t btn_id) {
-  int timeout = 0;
-  while (timeout++ < 100) {
-    // wait for button press
-    if (is_button_released(btn_id)) timeout = 0;
-    _delay_us(100);
-  }
-}
-
-void wait_button_release(uint8_t btn_id) {
-  int timeout = 0;
-  while (timeout++ < 100) {
-    // wait for button release
-    if (is_button_pressed(btn_id)) timeout = 0;
-    _delay_us(100);
-  }
-}
-
-void wait_button_click(uint8_t btn_id) {
-  // wait for button press
-  wait_button_press(btn_id);
-  // wait for button release
-  wait_button_release(btn_id);
-}
-
-int8_t button_clicked(uint8_t btn_id) {
-  // check if button is clicked
-  if (is_button_released(btn_id)) {
-    return 0;
-  }
-  wait_button_release(btn_id);
-  return 1;
-}
-
-enum msgbox_type_t {
-  MSGBOX_OK = 0,
-  MSGBOX_OKCANCEL,
-  MSGBOX_YESNOCANCEL,
-  MSGBOX_YESNO,
-  MSGBOX_RETRYCANCEL,
-  MSGBOX_CANCELRETRYCONTINUE,
-  MSGBOX_ABORTRETRYIGNORE,
-};
-
-const char s_ok[] PROGMEM = "OK";
-const char s_cancel[] PROGMEM = "Cancel";
-const char s_yes[] PROGMEM = "Yes";
-const char s_no[] PROGMEM = "No";
-const char s_retry[] PROGMEM = "Retry";
-const char s_continue[] PROGMEM = "Continue";
-const char s_abort[] PROGMEM = "Abort";
-const char s_ignore[] PROGMEM = "Ignore";
-
-const char *strings[] = {
-  s_ok,
-  s_cancel,
-  s_yes,
-  s_no,
-  s_retry,
-  s_continue,
-  s_abort,
-  s_ignore,
-};
-
-const uint8_t btn_strings[7][3] = {
-  {0, -1, -1},
-  {0, 1, -1},
-  {2, 3, 1},
-  {2, 3, -1},
-  {4, 1, -1},
-  {1, 4, 5},
-  {6, 4, 7},
-};
-
-int8_t msgboxP(const char *msg, enum msgbox_type_t type) {
-  (void)msg;
-  (void)type;
-  type = 0;
-  lcd_xcoord_t boxw = 200;
-  lcd_ycoord_t boxh = 80;
-  lcd_fns.fill_rectangle(160-boxw/2, 160+boxw/2, 120-boxh/2, 120+boxh/2, BLUE);
-  // int len = my_strlen_P(msg);
-  // lcd_display_stringP(160 - 3*len, 0, 100-4, 1, fonts_get_default(), &fonts_fns, msg, 0xFFFF);
-  uint8_t btn_count = 0;
-  for (uint8_t i = 0; i < 3; i++) {
-    if (btn_strings[type][i] != 0xFF) {
-      btn_count++;
-    }
-  }
-  // uint8_t spacing = 65;
-  // uint8_t w = 60;
-  
-  for (uint8_t i = 0; i < btn_count; i++) {
-    // uint8_t x = 160 - (btn_count-1)*spacing/2 + i*spacing;
-    uint8_t btn_id = btn_strings[type][i];
-    // lcd_fill_rectangle(x-w/2, x+w/2, 140, 150, 0x65bd);
-    if (btn_id > 7) continue;
-    // lcd_display_stringP(x - 3*my_strlen_P(strings[btn_id]), 0, 141, 1, fonts_get_default(), &fonts_fns, strings[btn_id], 0xFFFF);
-  }
-  wait_button_click(0);
-  return 0;
-}
 
 void __attribute__((noreturn)) app_reboot() {
   // reboot using watchdog
@@ -208,7 +79,7 @@ void __attribute__((noreturn)) bl_reboot() {
 }
 
 void __attribute__((noreturn)) error() {
-  msgboxP(PSTR("Please eject card"), MSGBOX_OK);
+  gui_msgboxP(&gui,PSTR("Please eject card"), MSGBOX_OK);
   while(sd_fns.detected()) wdt_reset();
   // reboot bootloader?
   bl_reboot();
@@ -245,22 +116,22 @@ int8_t partitions_init() {
   uint8_t buf[512];
   blockdev_read_sector(&root_bd, 0, buf);
   uint16_t magic = *((uint16_t*)&buf[510]);
-  // msgboxP(PSTR("Reading MBR"), MSGBOX_OK);
+  // gui_msgboxP(&gui,PSTR("Reading MBR"), MSGBOX_OK);
   if (magic != 0xAA55) {
-    // msgboxP(PSTR("Error reading MBR"), MSGBOX_OK);
+    // gui_msgboxP(&gui,PSTR("Error reading MBR"), MSGBOX_OK);
     goto err;
   }
   uint32_t start_sector = *((uint32_t*)(buf + 0x1BE + 8));
   uint32_t sector_count = *((uint32_t*)(buf + 0x1BE + 12));
   if (blockdev_partition(&root_bd, &partition_bd, start_sector, sector_count) != 0) {
     // error partitioning blockdev
-    // msgboxP(PSTR("Error partitioning"), MSGBOX_OK);
+    // gui_msgboxP(&gui,PSTR("Error partitioning"), MSGBOX_OK);
     goto err;
   }
   blockdev_read_sector(&partition_bd, 0, buf);
   magic = *((uint16_t*)&buf[510]);
   if (magic != 0xAA55) {
-    // msgboxP(PSTR("Error reading MBR"), MSGBOX_OK);
+    // gui_msgboxP(&gui,PSTR("Error reading MBR"), MSGBOX_OK);
     goto err;
   }
   return 0;
@@ -319,7 +190,7 @@ void __attribute__((noreturn)) sd_boot() {
   sd_fns.preinit();  
 
   if (!sd_fns.detected()) {
-    msgboxP(PSTR("Insert card"), MSGBOX_OK);
+    gui_msgboxP(&gui,PSTR("Insert card"), MSGBOX_OK);
     while(!sd_fns.detected()) {
       // wait for card to be inserted
       _delay_ms(100);
@@ -327,11 +198,11 @@ void __attribute__((noreturn)) sd_boot() {
   }
   {
     if (sd_fns.initialise() != 0) {
-      msgboxP(PSTR("Error initializing card"), MSGBOX_OK);
+      gui_msgboxP(&gui,PSTR("Error initializing card"), MSGBOX_OK);
       goto end;
     }
     if (partitions_init() != 0) {
-      msgboxP(PSTR("Error initializing partitions"), MSGBOX_OK);
+      gui_msgboxP(&gui,PSTR("Error initializing partitions"), MSGBOX_OK);
       goto end;
     }
   }
@@ -361,129 +232,10 @@ void __attribute__((noreturn)) sd_boot() {
     // char hex[] = "0123456789ABCDEF";
     ret = fat_fns.mount(&fs, false, false);
     if (ret != 0) {
-      msgboxP(PSTR("Error mounting filesystem"), MSGBOX_OK);
+      gui_msgboxP(&gui,PSTR("Error mounting filesystem"), MSGBOX_OK);
       goto end;
     }
-    FileInfo_t info;
-    int8_t selection = 0;
-    uint8_t num_lines = 6;
-    uint8_t line_start = 0;
-    char dir[64] = "/FOLDER/";
-    file_descriptor_t dirfd = fat_fns.opendir(&fs, dir);
-    const uint8_t line_spacing = 30;
-    uint8_t selected = 0;
-    while(1) {
-      lcd_fns.fill_rectangle(0, 320, 0, 20, BLACK);
-      // if (line_start > )
-      lcd_debug_u16(0, 0, line_start);
-      lcd_debug_u16(0, 10, selection);
-      lcd_ycoord_t y = 40;
-      int8_t line_no = 0;
-      uint16_t colors[] = {0x045c, 0x12d1};
-      if (selected) {
-        // get FileInfo of selected item
-        fat_fns.readdir(&fs, dirfd, NULL);
-        while (selected-- && (ret = fat_fns.readdir(&fs, dirfd, &info)) == 0) {
-          // do nothing
-        }
-        if (ret != 0) {
-          // error reading directory
-          msgboxP(PSTR("Error reading directory"), MSGBOX_OK);
-          goto end;
-        }
-        if (info.type == 1) {
-          
-          selected = 0;
-        } else if(info.type == 2) {
-          // directory
-          file_descriptor_t newdirfd = fat_fns.opendirat(&fs, dirfd, info.name);
-          if (newdirfd < 0) {
-            msgboxP(PSTR("Error opening directory"), MSGBOX_OK);
-            goto end;
-          }
-          fat_fns.closedir(&fs, dirfd);
-          dirfd = newdirfd;
-          if (dirfd < 0) {
-            goto end;
-          }
-          selected = 0;
-          selection = 0;
-          line_start = 0;
-        } else {
-          // unknown type
-          goto end;
-  
-        }
-      }
-      fat_fns.readdir(&fs, dirfd, NULL);
-      for (uint8_t ln = 0; ln < num_lines; ln++) {
-        lcd_ycoord_t y = 40 + ln*line_spacing;
-        lcd_ycoord_t ys = y - (line_spacing-16)/2;
-        lcd_ycoord_t ye = y + (line_spacing+1+16)/2;
-        lcd_fns.fill_rectangle(10, 309, ys, ye, colors[ln%2]);
-      }
-      while ((ret = fat_fns.readdir(&fs, dirfd, &info)) == 0) {
-        if (line_no < line_start) {
-          line_no++;
-          continue;
-        }
-        if (line_no >= line_start + num_lines) {
-          line_no++;
-          continue;
-        }
-        lcd_fns.display_string(40, 0, y, 2, fonts_fns.get_default(), &fonts_fns, info.name, 0xFFFF);
-        if (line_no == selection) {
-          lcd_fns.display_char(20, y, 2, fonts_fns.get_default(), &fonts_fns, '>', WHITE);
-        }
-        y += 30;
-        line_no++;
-      }
-      while(1) {
-        _delay_ms(10);
-        int8_t dt = encoder_dt(0);
-        if (button_clicked(BTN_N)) {
-          selection--;
-          break;
-        }
-        if (button_clicked(BTN_S)) {
-          selection++;
-          break;
-        }
-        if (button_clicked(BTN_C)) {
-          // button pressed
-          selected = selection+1;
-          break;
-        }
-        if (dt < 2 && dt > -2) {
-          continue;
-        }
-        int8_t sign = dt > 0 ? 1 : -1;
-        encoder_dt(dt);
-        selection += sign;
-        break;
-      }
-      
-      if (selection < 0) {
-        selection = 0;
-      }
-      if (selection >= line_no) {
-        selection = line_no-1;
-      }
-      if (selection < line_start) {
-        line_start--;
-      }
-      if (selection > line_start + num_lines - 1) {
-        line_start = selection - num_lines + 1;
-      }
-      if (selection < line_start) {
-        line_start = selection;
-      }
-      if (line_start > line_no ) {
-        line_start = line_no - 1;
-      }
-    }
   }
-
 
 
 end:

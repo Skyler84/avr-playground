@@ -17,6 +17,7 @@ target_link_modules(encoder_test
 target_link_libraries(encoder_test
     PRIVATE
         module
+        display
 )
 
 set_target_properties(encoder_test

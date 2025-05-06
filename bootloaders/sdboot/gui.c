@@ -109,12 +109,12 @@ int8_t gui_msgboxP(GUI_t *gui, const char *msg, enum msgbox_type_t type)
         .y1 = 120 - boxh / 2,
         .y2 = 120 + boxh / 2,
     };
-    MODULE_CALL(gfx, fill, gui->gfx, 0x0000);
-    MODULE_CALL(gfx, nostroke, gui->gfx);
-    MODULE_CALL(gfx, rectangle, gui->gfx, region);
+    MODULE_CALL_THIS(gfx, fill, gui->gfx, 0x0000);
+    MODULE_CALL_THIS(gfx, nostroke, gui->gfx);
+    MODULE_CALL_THIS(gfx, rectangle, gui->gfx, region);
     int len = my_strlen_P(msg);
-    MODULE_CALL(gfx, stroke, gui->gfx, BLACK);
-    MODULE_CALL(gfx, textP, gui->gfx, ((display_region_t){160 - 3 * len, 0, 0, 20}), msg);
+    MODULE_CALL_THIS(gfx, stroke, gui->gfx, BLACK);
+    MODULE_CALL_THIS(gfx, textP, gui->gfx, ((display_region_t){160 - 3 * len, 0, 0, 20}), msg);
     uint8_t btn_count = 0;
     for (uint8_t i = 0; i < 3; i++)
     {
@@ -136,13 +136,13 @@ int8_t gui_msgboxP(GUI_t *gui, const char *msg, enum msgbox_type_t type)
             .y1 = 140,
             .y2 = 150,
         };
-        MODULE_CALL(gfx, fill, gui->gfx, 0x65bd);
-        MODULE_CALL(gfx, rectangle, gui->gfx, region);
+        MODULE_CALL_THIS(gfx, fill, gui->gfx, 0x65bd);
+        MODULE_CALL_THIS(gfx, rectangle, gui->gfx, region);
         if (btn_id > 7)
             continue;
         const char *s = (const char*)pgm_read_word_elpm(&strings[btn_id]);
-        MODULE_CALL(gfx, stroke, gui->gfx, BLACK);
-        MODULE_CALL(gfx, textP, gui->gfx, ((display_region_t){x-3*my_strlen_P(s), 141, 0, 150}), s);
+        MODULE_CALL_THIS(gfx, stroke, gui->gfx, BLACK);
+        MODULE_CALL_THIS(gfx, textP, gui->gfx, ((display_region_t){x-3*my_strlen_P(s), 141, 0, 150}), s);
     }
     wait_button_click(0);
     return 0;
@@ -159,15 +159,15 @@ int8_t gui_choose_file(GUI_t *gui, FileSystem_t *fs, const char */* path */)
     uint8_t num_lines = 6;
     uint8_t line_start = 0;
     char dir[64] = "/FOLDER/";
-    file_descriptor_t dirfd = MODULE_CALL(fs, open, fs, dir, O_RDONLY | O_DIRECTORY);
+    file_descriptor_t dirfd = MODULE_CALL_THIS(fs, open, fs, dir, O_RDONLY | O_DIRECTORY);
     // uint32_t cluster;
     const uint8_t line_spacing = 30;
     uint8_t selected = 0;
     while (1)
     {
-        MODULE_CALL(gfx, fill, gui->gfx, BLACK);
-        MODULE_CALL(gfx, nostroke, gui->gfx);
-        MODULE_CALL(gfx, rectangle, gui->gfx, (display_region_t){0, 320, 0, 20});
+        MODULE_CALL_THIS(gfx, fill, gui->gfx, BLACK);
+        MODULE_CALL_THIS(gfx, nostroke, gui->gfx);
+        MODULE_CALL_THIS(gfx, rectangle, gui->gfx, (display_region_t){0, 320, 0, 20});
 
         display_ycoord_t y = 40;
         int8_t line_no = 0;
@@ -194,13 +194,13 @@ int8_t gui_choose_file(GUI_t *gui, FileSystem_t *fs, const char */* path */)
             else if (info.type == 2)
             {
                 // directory
-                file_descriptor_t newdirfd = MODULE_CALL(fs, openat, fs, dirfd, info.name, O_RDONLY  | O_DIRECTORY);
+                file_descriptor_t newdirfd = MODULE_CALL_THIS(fs, openat, fs, dirfd, info.name, O_RDONLY  | O_DIRECTORY);
                 if (newdirfd < 0)
                 {
                     gui_msgboxP(gui,PSTR("Error opening directory"), MSGBOX_OK);
                     goto end;
                 }
-                MODULE_CALL(fs, close, fs, dirfd);
+                MODULE_CALL_THIS(fs, close, fs, dirfd);
                 dirfd = newdirfd;
                 if (dirfd < 0)
                 {
@@ -222,10 +222,10 @@ int8_t gui_choose_file(GUI_t *gui, FileSystem_t *fs, const char */* path */)
             display_ycoord_t y = 40 + ln * line_spacing;
             display_ycoord_t ys = y - (line_spacing - 16) / 2;
             display_ycoord_t ye = y + (line_spacing + 1 + 16) / 2;
-            MODULE_CALL(gfx, fill, gui->gfx, colors[ln % 2]);
-            MODULE_CALL(gfx, rectangle, gui->gfx, (display_region_t){10, 309, ys, ye});
+            MODULE_CALL_THIS(gfx, fill, gui->gfx, colors[ln % 2]);
+            MODULE_CALL_THIS(gfx, rectangle, gui->gfx, (display_region_t){10, 309, ys, ye});
         }
-        while ((ret = MODULE_CALL(fs, getdirents, fs, dirfd, &info, 1)) == 1)
+        while ((ret = MODULE_CALL_THIS(fs, getdirents, fs, dirfd, &info, 1)) == 1)
         {
             if (line_no < line_start)
             {
@@ -237,11 +237,11 @@ int8_t gui_choose_file(GUI_t *gui, FileSystem_t *fs, const char */* path */)
                 line_no++;
                 continue;
             }
-            MODULE_CALL(gfx, stroke, gui->gfx, WHITE);
-            MODULE_CALL(gfx, text, gui->gfx, ((display_region_t){40, y, 0, y}), info.name);
+            MODULE_CALL_THIS(gfx, stroke, gui->gfx, WHITE);
+            MODULE_CALL_THIS(gfx, text, gui->gfx, ((display_region_t){40, y, 0, y}), info.name);
             if (line_no == selection)
             {
-                MODULE_CALL(gfx, text, gui->gfx, ((display_region_t){20, y, 0, y}), ">");
+                MODULE_CALL_THIS(gfx, text, gui->gfx, ((display_region_t){20, y, 0, y}), ">");
             }
             y += 30;
             line_no++;

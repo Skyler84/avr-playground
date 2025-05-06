@@ -39,8 +39,10 @@ int main() {
   DDRB = 0xFF; // Set PORTB as output
   sei();
   void (*encoder_test_fptr)(void) = encoder_test;
+  lcd_t lcd;
+  lcd.fns = &lcd_fns;
   if (lcd_fns.init != 0) {
-    lcd_fns.init();
+    MODULE_CALL_THIS(display, init, &lcd.display);
     // encoder_test_fptr = encoder_test_lcd;
   }
   while(1) {

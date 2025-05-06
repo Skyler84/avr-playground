@@ -120,7 +120,9 @@ typedef struct modname##_fns_t{\
 #define MODULE_FUNCTION_EXPORTS(modname, o) \
   o(modname, fn_lookup, fn_ptr_t, module_fn_id_t, moduleptr_t)\
   o(modname, next, moduleptr_t, moduleptr_t)\
-  o(modname, find_by_id, moduleptr_t, module_id_t)
+  o(modname, find_by_id, moduleptr_t, module_id_t)\
+  o(modname, init_fns, void, fn_ptr_t fns[], module_id_t id, uint16_t fn_ids[])
+
 
 
 #define MODULE_API_VER 0x0001

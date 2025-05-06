@@ -17,7 +17,6 @@ target_link_libraries(lcd_test
   PRIVATE
     module
     display
-    fonts
 )
 
 set_target_properties(lcd_test

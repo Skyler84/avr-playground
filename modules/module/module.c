@@ -49,13 +49,13 @@ moduleptr_t module_find_by_id(module_id_t id) {
   return (moduleptr_t)0;
 }
 
-void module_init_fns(module_fns_t fns[], module_id_t id, uint16_t fn_ids[]) {
+void module_init_fns(fn_ptr_t fns[], module_id_t id, uint16_t fn_ids[]) {
   moduleptr_t module = module_find_by_id(id);
   if (module == (moduleptr_t)0) {
     return;
   }
   for (uint8_t i = 0; fn_ids[i]; i++) {
-    fns->fptr_arr[i] = module_fn_lookup(fn_ids[i], module);
+    fns[i] = module_fn_lookup(fn_ids[i], module);
   }
 }
 

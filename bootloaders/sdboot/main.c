@@ -178,15 +178,16 @@ void flash_page_erase_program(uint32_t page, const uint8_t *buf) {
 }
 
 char hex[] = "0123456789ABCDEF";
-void lcd_debug_u16(lcd_xcoord_t x, lcd_ycoord_t y, uint16_t val) {
-  lcd_fns.display_char(x, y, 1, fonts_fns.get_default(), &fonts_fns, hex[(val>>12)&0x0f], WHITE);
-  lcd_fns.display_char(x+6, y, 1, fonts_fns.get_default(), &fonts_fns, hex[(val>>8)&0x0f], WHITE);
-  lcd_fns.display_char(x+12, y, 1, fonts_fns.get_default(), &fonts_fns, hex[(val>>4)&0x0f], WHITE);
-  lcd_fns.display_char(x+18, y, 1, fonts_fns.get_default(), &fonts_fns, hex[(val>>0)&0x0f], WHITE);
+lcd_t lcd;
+void lcd_debug_u16(lcd_xcoord_t /* x */, lcd_ycoord_t /* y */, uint16_t /* val */) {
+  // .display_char(x, y, 1, fonts_fns.get_default(), &fonts_fns, hex[(val>>12)&0x0f], WHITE);
+  // .display_char(x+6, y, 1, fonts_fns.get_default(), &fonts_fns, hex[(val>>8)&0x0f], WHITE);
+  // .display_char(x+12, y, 1, fonts_fns.get_default(), &fonts_fns, hex[(val>>4)&0x0f], WHITE);
+  // .display_char(x+18, y, 1, fonts_fns.get_default(), &fonts_fns, hex[(val>>0)&0x0f], WHITE);
 }
 
 void __attribute__((noreturn)) sd_boot() {
-  lcd_fns.fill_rectangle(0, 320, 0, 240, BLACK);
+  // lcd_fns.fill_rectangle(0, 320, 0, 240, BLACK);
   sd_fns.preinit();  
 
   if (!sd_fns.detected()) {
@@ -248,14 +249,40 @@ void __attribute__((noreturn)) run_interactive() {
   PORTE |= 0x80;
   DDRC &= ~0x3C;
   PORTC |= 0x3C;
-  lcd_fns.init();
-  lcd_fns.set_orientation(West);
-  lcd_fns.clear(0x0000);
+  lcd_fns_t lcd_fns;
+  gfx_fns_t gfx_fns;
 
-  const char *menu[] = {
-    PSTR("Boot from SD file"),
-    PSTR("Reboot application")
+  {
+    uint16_t lcd_fn_ids[] = {
+      LCD_FUNCTION_EXPORTS(lcd, MODULE_ENUM_FN_ID)
+      0
+    };
+    module_init_fns(lcd_fns.fptr_arr, LCD_MODULE_ID, lcd_fn_ids);
+  }
+  {
+    uint16_t gfx_fn_ids[] = {
+      GFX_FUNCTION_EXPORTS(gfx, MODULE_ENUM_FN_ID)
+      0
+    };
+    module_init_fns(gfx_fns.fptr_arr, GFX_MODULE_ID, gfx_fn_ids);
+  }
+
+
+  lcd_t lcd = {
+    .fns = &lcd_fns,
   };
+  MODULE_CALL_THIS(display, init, &lcd.display);
+  MODULE_CALL_THIS(lcd, set_orientation, &lcd, West);
+  MODULE_CALL_THIS(lcd, clear, &lcd, BLACK);
+  gfx_t gfx = {
+    .display = &lcd.display,
+    .fns = &gfx_fns,
+  };
+
+  // const char *menu[] = {
+  //   PSTR("Boot from SD file"),
+  //   PSTR("Reboot application")
+  // };
 
   typedef __attribute__((noreturn)) void (*menu_func_t)(void);
   menu_func_t menu_func[] = {
@@ -264,11 +291,11 @@ void __attribute__((noreturn)) run_interactive() {
   };
 
   for (int i = 0; i < 2; i++) {
-    lcd_fns.display_stringP(20, 0, 40 + i*20, 2, fonts_fns.get_default(), &fonts_fns, menu[i], 0xFFFF);
+    // lcd_fns.display_stringP(20, 0, 40 + i*20, 2, fonts_fns.get_default(), &fonts_fns, menu[i], 0xFFFF);
   }
   int8_t selection = 0;
   __attribute__((noreturn)) menu_func_t func = NULL;
-  lcd_fns.display_char(0, 40 + selection*20, 2, fonts_fns.get_default(), &fonts_fns, '>', WHITE);
+  // lcd_fns.display_char(0, 40 + selection*20, 2, fonts_fns.get_default(), &fonts_fns, '>', WHITE);
   encoder_init();
   DDRE &= ~0x80;
   PORTE |= 0x80;
@@ -291,8 +318,11 @@ void __attribute__((noreturn)) run_interactive() {
     } else if (selection > 1) {
       selection = 1;
     }
-    lcd_fns.fill_rectangle(0, 19, 40, 40 + 2*20, BLACK);
-    lcd_fns.display_char(0, 40 + selection*20, 2, fonts_fns.get_default(), &fonts_fns, '>', WHITE);
+    MODULE_CALL_THIS(gfx, fill, &gfx, BLACK);
+    MODULE_CALL_THIS(gfx, nostroke, &gfx);
+    MODULE_CALL_THIS(gfx, rectangle, &gfx, (display_region_t){0, 40, 19, 40+2*20});
+    MODULE_CALL_THIS(gfx, fill, &gfx, WHITE);
+    MODULE_CALL_THIS(gfx, text, &gfx, ((display_region_t){0, 40+selection*20, 19, 60+selection*20}), ">");
   }
 
   func();

@@ -13,20 +13,21 @@ target_sources(sdboot
 
 target_link_modules(sdboot
     PRIVATE
-)
-target_link_libraries(sdboot
-    PRIVATE
-        module
-        fonts
         sd
         fat
         lcd
         gfx
 )
+target_link_libraries(sdboot
+    PRIVATE
+        module
+        display
+        blockdev
+)
 
 set_target_properties(sdboot PROPERTIES 
     BOOT_START_ADDRESS 0x1E000
-    BOOT_MODULE_START_ADDRESS 0x1C000
+    BOOT_MODULE_START_ADDRESS 0x1A000
     APP_MODULE_START_ADDRESS 0x2000
 )
 

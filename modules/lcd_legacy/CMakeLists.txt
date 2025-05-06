@@ -1,0 +1,23 @@
+add_module(lcd_legacy)
+target_sources(lcd_legacy
+    PRIVATE
+        lcd.c
+)
+target_include_directories(lcd_legacy
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+target_link_modules(lcd_legacy
+    PRIVATE
+        module
+        fonts
+)
+target_link_libraries(lcd_legacy
+    PUBLIC
+        display
+        blockdev
+        fs
+)

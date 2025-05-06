@@ -46,6 +46,27 @@
 #define MODULE_IMPORT_FUNCTIONS(modname, id, exports)\
   XCAT(MODULE_IMPORT_, XCAT(modname,_MODTYPE))(modname, id, exports)
 
+#define MODULE_IMPORT_FUNCTION_STATIC(modname, name, returns, ...) \
+
+
+#define MODULE_IMPORT_FUNCTIONS_RUNTIME_STATIC(modname, id, exports, fns) \
+{\
+  *(fns) = (modname##_fns_t){\
+    exports(modname, DEFINE_IMPORTED_FN_STATIC)\
+  }\
+}
+#define MODULE_IMPORT_FUNCTIONS_RUNTIME_MODULE(modname, id, exports, fns) \
+{\
+  uint16_t modname##_fn_ids[] = {\
+    exports(modname, MODULE_ENUM_FN_ID)\
+    0\
+  };\
+  module_init_fns((fns)->fptr_arr, id, modname##_fn_ids);\
+}
+
+#define MODULE_IMPORT_FUNCTIONS_RUNTIME(modname, id, exports, fns)\
+  XCAT(MODULE_IMPORT_FUNCTIONS_RUNTIME_, XCAT(modname,_MODTYPE))(modname, id, exports, fns)
+
 /*
  #define MODULE_TRAMPOLINE_FN(modname, name, returns, ...) \
      returns modname##_##name(__VA_ARGS__) {\

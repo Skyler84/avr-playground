@@ -251,21 +251,8 @@ void __attribute__((noreturn)) run_interactive() {
   PORTC |= 0x3C;
   lcd_fns_t lcd_fns;
   gfx_fns_t gfx_fns;
-
-  {
-    uint16_t lcd_fn_ids[] = {
-      LCD_FUNCTION_EXPORTS(lcd, MODULE_ENUM_FN_ID)
-      0
-    };
-    module_init_fns(lcd_fns.fptr_arr, LCD_MODULE_ID, lcd_fn_ids);
-  }
-  {
-    uint16_t gfx_fn_ids[] = {
-      GFX_FUNCTION_EXPORTS(gfx, MODULE_ENUM_FN_ID)
-      0
-    };
-    module_init_fns(gfx_fns.fptr_arr, GFX_MODULE_ID, gfx_fn_ids);
-  }
+  MODULE_IMPORT_FUNCTIONS_RUNTIME(lcd, LCD_MODULE_ID, LCD_FUNCTION_EXPORTS, &lcd_fns);
+  MODULE_IMPORT_FUNCTIONS_RUNTIME(gfx, GFX_MODULE_ID, GFX_FUNCTION_EXPORTS, &gfx_fns);
 
 
   lcd_t lcd = {
@@ -273,7 +260,8 @@ void __attribute__((noreturn)) run_interactive() {
   };
   MODULE_CALL_THIS(display, init, &lcd.display);
   MODULE_CALL_THIS(lcd, set_orientation, &lcd, West);
-  MODULE_CALL_THIS(lcd, clear, &lcd, BLACK);
+  MODULE_CALL_THIS(display, region_set, &lcd.display, (display_region_t){0, 320, 0, 240});
+  MODULE_CALL_THIS(display, fill, &lcd.display, BLACK, 320ul*240ul);
   gfx_t gfx = {
     .display = &lcd.display,
     .fns = &gfx_fns,

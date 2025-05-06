@@ -1,4 +1,4 @@
-#include "lcd/lcd.h"
+#include "lcd_legacy/lcd.h"
 #include "ili934x.h"
 #include "module/pic.h"
 
@@ -23,9 +23,9 @@ static void write_data(uint8_t data) {
   DATA_REG=data;
 }
 
-// static uint8_t read_data() {
-//   return DATA_REG;
-// }
+static uint8_t read_data() {
+  return DATA_REG;
+}
 
 #else
 static void NOINLINE write_cmd(uint8_t cmd) {
@@ -43,14 +43,14 @@ static void NOINLINE write_data(uint8_t data) {
   
 }
 
-// static uint8_t NOINLINE read_data() {
-//   DATA_DDR = 0;
-//   RD_lo();
-//   uint8_t ret = DATA_PIN;
-//   RD_hi();
-//   DATA_DDR = 0xff;
-//   return ret;
-// }
+static uint8_t NOINLINE read_data() {
+  DATA_DDR = 0;
+  RD_lo();
+  uint8_t ret = DATA_PIN;
+  RD_hi();
+  DATA_DDR = 0xff;
+  return ret;
+}
 
 #endif
 
@@ -241,6 +241,109 @@ void lcd_set_orientation(lcd_t *, orientation o) {
 		// display.height = LCDWIDTH;
 		write_data(0x28);
 	}
+}
+
+void lcd_clear(lcd_t *,lcd_colour_t col) {
+  lcd_xcoord_t w = 0;
+  lcd_ycoord_t h = 0;
+  write_cmd(MEMORY_ACCESS_CONTROL);
+  uint8_t data = read_data();
+  switch(data) {
+    case 0x48:
+    case 0x88:
+      w = LCDWIDTH;
+      h = LCDHEIGHT;
+      break;
+    case 0xE8:
+    case 0x28:
+      w = LCDHEIGHT;
+      h = LCDWIDTH;
+      break;
+  }
+  lcd_set_window(0, w-1, 0, h-1);
+  write_cmd(MEMORY_WRITE);
+  for (lcd_xcoord_t x=0; x<LCDWIDTH; x++) {
+    for (lcd_ycoord_t y=0; y<LCDHEIGHT; y++) {
+      write_data16(col);
+    }
+  }
+}
+
+void lcd_fill_rectangle(lcd_t*, lcd_xcoord_t xs, lcd_xcoord_t xe, lcd_ycoord_t ys, lcd_ycoord_t ye, lcd_colour_t col) {
+  lcd_set_window(xs, xe, ys, ye);
+  write_cmd(MEMORY_WRITE);
+  for (lcd_xcoord_t x=xs; x<=xe; x++) {
+    for (lcd_ycoord_t y=ys; y<=ye; y++) {
+      write_data16(col);
+    }
+  }
+}
+
+void lcd_fill_rectangle_indexed(lcd_t*, lcd_xcoord_t xs, lcd_xcoord_t xe, lcd_ycoord_t ys, lcd_ycoord_t ye, const lcd_colour_t* col) {
+  lcd_set_window(xs, xe, ys, ye);
+  write_cmd(MEMORY_WRITE);
+  for (lcd_xcoord_t x=xs; x<=xe; x++) {
+    for (lcd_ycoord_t y=ys; y<=ye; y++) {
+      write_data16(*col++);
+    }
+  }
+}
+
+void lcd_fill_rectangle_indexedP(lcd_t*, lcd_xcoord_t xs, lcd_xcoord_t xe, lcd_ycoord_t ys, lcd_ycoord_t ye, const lcd_colour_t* col) {
+  lcd_set_window(xs, xe, ys, ye);
+  write_cmd(MEMORY_WRITE);
+  for (lcd_xcoord_t x=xs; x<=xe; x++) {
+    for (lcd_ycoord_t y=ys; y<=ye; y++) {
+      write_data16(pgm_read_word_elpm(col++));
+    }
+  }
+}
+
+void lcd_display_char(lcd_t *this, lcd_xcoord_t x, lcd_ycoord_t y, uint8_t scale, font_t *font, fonts_fns_t *font_fns, char c, lcd_colour_t col)
+{
+  uint8_t char_width = font_fns->get_char_width(font, (uint8_t*)&c);
+  uint8_t char_height = font_fns->get_char_height(font, (uint8_t*)&c);
+  const uint8_t *bitmap_char = font_fns->get_char_bitmap(font, c);
+  if (bitmap_char == NULL) {
+    bitmap_char = font_fns->get_char_bitmap(font, '?');
+  }
+  for (uint8_t i=0; i<char_width; i++) {
+    for (uint8_t j=0; j<char_height; j++) {
+      if (pgm_read_byte_elpm(&bitmap_char[i]) & (1 << j)) {
+        lcd_fill_rectangle(this, x+i*scale, x+(i+1)*scale-1, y+j*scale, y+(j+1)*scale-1, col);
+      }
+    }
+  }
+}
+
+void lcd_display_stringP(lcd_t *this, lcd_xcoord_t _x, lcd_xcoord_t wrap, lcd_ycoord_t y, uint8_t scale, font_t *font, fonts_fns_t *font_fns, const char* str, lcd_colour_t col) {
+  char c;
+  lcd_xcoord_t x = _x;
+  while ((c = pgm_read_byte_elpm(str++)) != 0) {
+    lcd_display_char(this, x, y, scale, font, font_fns, c, col);
+    uint8_t char_width = font_fns->get_char_width(font, (uint8_t*)&c);
+    x += (char_width+1)*scale;
+    if (x > wrap - font->char_width*scale-10) {
+      uint8_t char_height = font_fns->get_char_height(font, (uint8_t*)&c);
+      x = _x;
+      y += (char_height+1)*scale;
+    }
+  }
+}
+
+void lcd_display_string(lcd_t *this, lcd_xcoord_t _x, lcd_xcoord_t wrap, lcd_ycoord_t y, uint8_t scale, font_t *font, fonts_fns_t *font_fns, const char* str, lcd_colour_t col) {
+  char c;
+  lcd_xcoord_t x = _x;
+  while ((c = *str++) != 0) {
+    lcd_display_char(this, x, y, scale, font, font_fns, c, col);
+    uint8_t char_width = font_fns->get_char_width(font, (uint8_t*)&c);
+    x += (char_width+1)*scale;
+    if (x > wrap - font->char_width*scale-10) {
+      uint8_t char_height = font_fns->get_char_height(font, (uint8_t*)&c);
+      x = _x;
+      y += (char_height+1)*scale;
+    }
+  }
 }
 
 lcd_xcoord_t lcd_get_width(lcd_t* this) {

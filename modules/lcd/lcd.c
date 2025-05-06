@@ -1,10 +1,11 @@
-#include "lcd.h"
+#include "lcd/lcd.h"
 #include "ili934x.h"
 #include "module/pic.h"
 
 #include <stdint.h>
 #include <util/delay.h>
 #include <avr/pgmspace.h>
+#include <avr/io.h>
 
 // #define NOINLINE __attribute__((noinline))
 #define NOINLINE
@@ -124,7 +125,7 @@ static void NOINLINE lcd_set_window(lcd_xcoord_t xs, lcd_xcoord_t xe, lcd_ycoord
 
 MODULE_FN_PROTOS(lcd, LCD_FUNCTION_EXPORTS)
 
-void lcd_init() {
+void lcd_init(display_t*) {
 
 #ifdef __AVR_AT90USB1286__
   
@@ -176,6 +177,7 @@ void lcd_init() {
     0
   };
   write_cmd_data_seq_P(init_seq+GET_MODULE_DATA_PTR_OFFSET());
+  // write_cmd_data_seq_P(init_seq);
     /* Clear display */
 	for(x=0; x<240; x++)
 		for(y=0; y<320; y++)
@@ -185,7 +187,38 @@ void lcd_init() {
 	BLC_hi();
 }
 
-void lcd_set_orientation(orientation o) {
+void lcd_set_pixel(display_t *, display_coord_t coord, lcd_colour_t col) {
+  lcd_set_window(coord.x, coord.x, coord.y, coord.y);
+  write_cmd(MEMORY_WRITE);
+  write_data16(col);
+}
+
+void lcd_region_set(display_t*, display_region_t r) {
+  lcd_set_window(r.x1, r.x2, r.y1, r.y2);
+}
+
+void lcd_fill(display_t*, display_colour_t col, uint32_t n) {
+  write_cmd(MEMORY_WRITE);
+  for (uint32_t i=0; i<n; i++) {
+    write_data16(col);
+  }
+}
+
+void lcd_fill_indexed(display_t*, display_colour_t *col, uint32_t n) {
+  write_cmd(MEMORY_WRITE);
+  for (uint32_t i=0; i<n; i++) {
+    write_data16(*col++);
+  }
+}
+
+void lcd_fill_indexedP(display_t*, display_colour_t *col, uint32_t n) {
+  write_cmd(MEMORY_WRITE);
+  for (uint32_t i=0; i<n; i++) {
+    write_data16(pgm_read_word_elpm(col++));
+  }
+}
+
+void lcd_set_orientation(lcd_t *, orientation o) {
   
 	write_cmd(MEMORY_ACCESS_CONTROL);
 	if (o==North) { 
@@ -210,7 +243,7 @@ void lcd_set_orientation(orientation o) {
 	}
 }
 
-void lcd_clear(lcd_colour_t col) {
+void lcd_clear(lcd_t *,lcd_colour_t col) {
   lcd_xcoord_t w = 0;
   lcd_ycoord_t h = 0;
   write_cmd(MEMORY_ACCESS_CONTROL);
@@ -236,13 +269,7 @@ void lcd_clear(lcd_colour_t col) {
   }
 }
 
-void lcd_set_pixel(lcd_xcoord_t x, lcd_ycoord_t y, lcd_colour_t col) {
-  lcd_set_window(x, x, y, y);
-  write_cmd(MEMORY_WRITE);
-  write_data16(col);
-}
-
-void lcd_fill_rectangle(lcd_xcoord_t xs, lcd_xcoord_t xe, lcd_ycoord_t ys, lcd_ycoord_t ye, lcd_colour_t col) {
+void lcd_fill_rectangle(lcd_t*, lcd_xcoord_t xs, lcd_xcoord_t xe, lcd_ycoord_t ys, lcd_ycoord_t ye, lcd_colour_t col) {
   lcd_set_window(xs, xe, ys, ye);
   write_cmd(MEMORY_WRITE);
   for (lcd_xcoord_t x=xs; x<=xe; x++) {
@@ -252,7 +279,7 @@ void lcd_fill_rectangle(lcd_xcoord_t xs, lcd_xcoord_t xe, lcd_ycoord_t ys, lcd_y
   }
 }
 
-void lcd_fill_rectangle_indexed(lcd_xcoord_t xs, lcd_xcoord_t xe, lcd_ycoord_t ys, lcd_ycoord_t ye, const lcd_colour_t* col) {
+void lcd_fill_rectangle_indexed(lcd_t*, lcd_xcoord_t xs, lcd_xcoord_t xe, lcd_ycoord_t ys, lcd_ycoord_t ye, const lcd_colour_t* col) {
   lcd_set_window(xs, xe, ys, ye);
   write_cmd(MEMORY_WRITE);
   for (lcd_xcoord_t x=xs; x<=xe; x++) {
@@ -262,7 +289,7 @@ void lcd_fill_rectangle_indexed(lcd_xcoord_t xs, lcd_xcoord_t xe, lcd_ycoord_t y
   }
 }
 
-void lcd_fill_rectangle_indexedP(lcd_xcoord_t xs, lcd_xcoord_t xe, lcd_ycoord_t ys, lcd_ycoord_t ye, const lcd_colour_t* col) {
+void lcd_fill_rectangle_indexedP(lcd_t*, lcd_xcoord_t xs, lcd_xcoord_t xe, lcd_ycoord_t ys, lcd_ycoord_t ye, const lcd_colour_t* col) {
   lcd_set_window(xs, xe, ys, ye);
   write_cmd(MEMORY_WRITE);
   for (lcd_xcoord_t x=xs; x<=xe; x++) {
@@ -272,7 +299,7 @@ void lcd_fill_rectangle_indexedP(lcd_xcoord_t xs, lcd_xcoord_t xe, lcd_ycoord_t 
   }
 }
 
-void lcd_display_char(lcd_xcoord_t x, lcd_ycoord_t y, uint8_t scale, font_t *font, fonts_fns_t *font_fns, char c, lcd_colour_t col)
+void lcd_display_char(lcd_t *this, lcd_xcoord_t x, lcd_ycoord_t y, uint8_t scale, font_t *font, fonts_fns_t *font_fns, char c, lcd_colour_t col)
 {
   uint8_t char_width = font_fns->get_char_width(font, (uint8_t*)&c);
   uint8_t char_height = font_fns->get_char_height(font, (uint8_t*)&c);
@@ -283,17 +310,17 @@ void lcd_display_char(lcd_xcoord_t x, lcd_ycoord_t y, uint8_t scale, font_t *fon
   for (uint8_t i=0; i<char_width; i++) {
     for (uint8_t j=0; j<char_height; j++) {
       if (pgm_read_byte_elpm(&bitmap_char[i]) & (1 << j)) {
-        lcd_fill_rectangle(x+i*scale, x+(i+1)*scale-1, y+j*scale, y+(j+1)*scale-1, col);
+        lcd_fill_rectangle(this, x+i*scale, x+(i+1)*scale-1, y+j*scale, y+(j+1)*scale-1, col);
       }
     }
   }
 }
 
-void lcd_display_stringP(lcd_xcoord_t _x, lcd_xcoord_t wrap, lcd_ycoord_t y, uint8_t scale, font_t *font, fonts_fns_t *font_fns, const char* str, lcd_colour_t col) {
+void lcd_display_stringP(lcd_t *this, lcd_xcoord_t _x, lcd_xcoord_t wrap, lcd_ycoord_t y, uint8_t scale, font_t *font, fonts_fns_t *font_fns, const char* str, lcd_colour_t col) {
   char c;
   lcd_xcoord_t x = _x;
   while ((c = pgm_read_byte_elpm(str++)) != 0) {
-    lcd_display_char(x, y, scale, font, font_fns, c, col);
+    lcd_display_char(this, x, y, scale, font, font_fns, c, col);
     uint8_t char_width = font_fns->get_char_width(font, (uint8_t*)&c);
     x += (char_width+1)*scale;
     if (x > wrap - font->char_width*scale-10) {
@@ -304,11 +331,11 @@ void lcd_display_stringP(lcd_xcoord_t _x, lcd_xcoord_t wrap, lcd_ycoord_t y, uin
   }
 }
 
-void lcd_display_string(lcd_xcoord_t _x, lcd_xcoord_t wrap, lcd_ycoord_t y, uint8_t scale, font_t *font, fonts_fns_t *font_fns, const char* str, lcd_colour_t col) {
+void lcd_display_string(lcd_t *this, lcd_xcoord_t _x, lcd_xcoord_t wrap, lcd_ycoord_t y, uint8_t scale, font_t *font, fonts_fns_t *font_fns, const char* str, lcd_colour_t col) {
   char c;
   lcd_xcoord_t x = _x;
   while ((c = *str++) != 0) {
-    lcd_display_char(x, y, scale, font, font_fns, c, col);
+    lcd_display_char(this, x, y, scale, font, font_fns, c, col);
     uint8_t char_width = font_fns->get_char_width(font, (uint8_t*)&c);
     x += (char_width+1)*scale;
     if (x > wrap - font->char_width*scale-10) {
@@ -319,31 +346,23 @@ void lcd_display_string(lcd_xcoord_t _x, lcd_xcoord_t wrap, lcd_ycoord_t y, uint
   }
 }
 
-lcd_xcoord_t lcd_get_width() {
-  return lcd_get_size().x;
+lcd_xcoord_t lcd_get_width(lcd_t* this) {
+  return lcd_get_size(this).x;
 }
 
-lcd_ycoord_t lcd_get_height() {
-  return lcd_get_size().y;
+lcd_ycoord_t lcd_get_height(lcd_t* this) {
+  return lcd_get_size(this).y;
 }
 
-lcd_coord_t lcd_get_size(orientation o) {
+lcd_coord_t lcd_get_size(lcd_t*) {
   lcd_coord_t size;
   write_cmd(MEMORY_ACCESS_CONTROL);
-  switch(o) {
-    case North:
-    case South:
-      size.x = LCDWIDTH;
-      size.y = LCDHEIGHT;
-      break;
-    case East:
-    case West:
-      size.x = LCDHEIGHT;
-      size.y = LCDWIDTH;
-      break;
-  }
+  
+  size.x = LCDWIDTH;
+  size.y = LCDHEIGHT;
   return size;
 }
+
 
 
 REGISTER_MODULE(lcd, LCD_MODULE_ID, LCD_FUNCTION_EXPORTS, LCD_API_VER);

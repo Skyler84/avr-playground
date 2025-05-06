@@ -7,7 +7,7 @@ function(make_avr_app target)
     add_custom_command(
         TARGET ${target}
         POST_BUILD
-        OUTPUTS ${app}.hex ${app}.bin
+        BYPRODUCTS ${app}.hex ${app}.bin ${app}.all.hex
         COMMAND avr-size ${target}
         COMMAND cp ${target} ${app}.elf
         COMMAND avr-objcopy -O ihex ${target} ${app}.hex
@@ -17,9 +17,22 @@ function(make_avr_app target)
         COMMAND srec_cat -O ${app}.all.hex "$<$<BOOL:$<TARGET_PROPERTY:${target},LINK_MODULES_BINS>>:-Intel;${app}.mods.hex>" -Intel ${app}.hex -Intel || { echo "Try increasing APP_MODULE_START_ADDRESS for target ${target}" \\\; exit 1 \\\; }
         COMMAND_EXPAND_LISTS
     )
+
+    add_custom_target(
+        ${target}_flash
+        DEPENDS ${app}.hex
+        COMMAND avrdude -p ${MCU} -c ${PROGRAMMER} -U flash:w:${app}.hex
+    )
+    add_custom_target(
+        ${target}_flash_all
+        DEPENDS ${app}.all.hex
+        COMMAND avrdude -p ${MCU} -c ${PROGRAMMER} -U flash:w:${app}.all.hex
+    )
 endfunction()
 
 
 add_subdirectory(blinky)
 add_subdirectory(audio_test)
 add_subdirectory(encoder_test)
+add_subdirectory(lcd_test)
+add_subdirectory(gfx_test)

@@ -33,12 +33,12 @@ typedef struct display display_t;
 
 
 #define DISPLAY_FUNCTION_INTERFACE(modname, o) \
-    o(modname, init, void) \
+    o(modname, init, void, display_t *) \
     o(modname, set_pixel, void, display_t *, display_coord_t, display_colour_t) \
     o(modname, region_set, void, display_t *, display_region_t) \
-    o(modname, fill, void, display_t *, display_colour_t, size_t) \
-    o(modname, fill_indexed, void, display_t *, display_colour_t *, size_t) \
-    o(modname, fill_rectangle, void, display_t *, display_region_t, display_colour_t) \
+    o(modname, fill, void, display_t *, display_colour_t, uint32_t) \
+    o(modname, fill_indexed, void, display_t *, display_colour_t *, uint32_t) \
+    o(modname, fill_indexedP, void, display_t *, display_colour_t *, uint32_t)
 
 MODULE_DECLARE_FN_IDS(display, DISPLAY_FUNCTION_INTERFACE)
 MODULE_DECLARE_FN_TYPES(display, DISPLAY_FUNCTION_INTERFACE)

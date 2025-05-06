@@ -26,7 +26,7 @@ typedef struct gfx gfx_t;
     o(modname, rectangle, void, gfx_t *gfx, gfx_region_t r) \
     o(modname, circle, void, gfx_t *gfx, gfx_coord_t center, uint8_t radius) \
     o(modname, ellipse, void, gfx_t *gfx, gfx_coord_t focusA, gfx_coord_t focusB, uint8_t radius) \
-    o(modname, triangle, void, gfx_t *gfx, gfx_coord_t a, gfx_coord_t b, gfx_coord_t c, gfx_colour_t colour) \
+    o(modname, triangle, void, gfx_t *gfx, gfx_coord_t a, gfx_coord_t b, gfx_coord_t c) \
     o(modname, arc, void, gfx_t *gfx, gfx_coord_t center, uint8_t radiusX, uint8_t radiusY, uint16_t startAngle, uint16_t endAngle) \
     o(modname, text, void, gfx_t *gfx, gfx_region_t box, const char *text) \
     o(modname, textP, void, gfx_t *gfx, gfx_region_t coord, const char *text) \

@@ -43,6 +43,11 @@ function(add_module name)
         PUBLIC
             ${name}_MODTYPE=STATIC
     )
+    add_custom_command(
+        TARGET ${name}
+        POST_BUILD
+        COMMAND avr-size lib${name}.a
+    )
     # create both a static library
     # and an interface library with hex files
     add_executable(mod_${name})

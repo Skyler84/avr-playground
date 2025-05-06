@@ -95,10 +95,10 @@ typedef struct modname##_fns_t{\
 // --------------------------------
 
 #define REGISTER_MODULE_FN(modname, name, ...) \
-  { modname##_##name##_fn_id, (void*)&modname##_##name },
+  { modname##_##name##_fn_id, (void*)(modname##_##name##_fn_t)&modname##_##name },
 
 #define REGISTER_MODULE(modname, _id, exports, api_ver)\
-  static const module_t module __attribute__((used, section(".module_header"))) = \
+  static const module_t module __attribute__((used, section(".progmem.module_header"))) = \
   {\
     .magic = AVR_MODULE_MAGIC,\
     .id = _id,\

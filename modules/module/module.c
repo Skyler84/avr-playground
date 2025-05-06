@@ -6,19 +6,19 @@
 extern module_fn_t module_fn_table_default[] __attribute__((weak));
 
 fn_ptr_t module_fn_lookup(uint16_t _id, moduleptr_t module) {
-  const module_fn_t *fn;
+  uint32_t fn = 0;
   if (module == 0) {
-    fn = module_fn_table_default;
+    // fn = (uint32_t)module_fn_table_default;
   } else {
-    fn = (module_fn_t*)pgm_read_word_far(module + offsetof(module_t, fn_table));
+    fn = (uint32_t)(module + (uint32_t)offsetof(module_t, fn_table));
   }
-  if (fn == NULL) {
+  if (fn == 0) {
     return NULL;
   }
   uint16_t id;
-  while ((id = pgm_read_word(&fn->id)) != 0x0000U) {
+  while ((id = pgm_read_word_far(fn + offsetof(module_fn_t, id))) != 0x0000U) {
     if (id == _id) {
-      return (fn_ptr_t)(pgm_read_word(&fn->fn) + pgm_ptr_to_fn_ptr(module));
+      return (fn_ptr_t)(pgm_read_word_far(fn + offsetof(module_fn_t, fn)) + pgm_ptr_to_fn_ptr(module));
     }
     fn++;
   }
@@ -47,6 +47,16 @@ moduleptr_t module_find_by_id(module_id_t id) {
     }
   }
   return (moduleptr_t)0;
+}
+
+void module_init_fns(module_fns_t fns[], module_id_t id, uint16_t fn_ids[]) {
+  moduleptr_t module = module_find_by_id(id);
+  if (module == (moduleptr_t)0) {
+    return;
+  }
+  for (uint8_t i = 0; fn_ids[i]; i++) {
+    fns->fptr_arr[i] = module_fn_lookup(fn_ids[i], module);
+  }
 }
 
 REGISTER_MODULE(module, MODULE_MODULE_ID, MODULE_FUNCTION_EXPORTS, MODULE_API_VER);

@@ -6,15 +6,37 @@
 
 #include <avr/io.h>
 #include <util/delay.h>
+#include <string.h>
 
 #define BLACK_SPACE_COLOUR (0x0841U*0x00U)
 #define WHITE_SPACE_COLOUR (0x0841U*0x18U)
 #define BLACK_PIECE_COLOUR BLUE
 #define WHITE_PIECE_COLOUR GREEN
 
+#define WHITE_HOME 0
+#define BLACK_HOME 25
+
 #define TRIANGLE_LENGTH 80
 #define TRIANGLE_WIDTH 20
 #define TRIANGLE_SPACING 21
+
+#define PIECE_RADIUS 10
+#define PIECE_STROKEWIDTH 2
+
+/**
+ * 
+ * Move syntax:
+ * "4-4:" represents rolling a double 4
+ * "3-1:" represents rolling a 3 and a 1
+ * "8/4" represents moving a piece from 8 to 4
+ * "4-2:8/4 6/4" represents moving a piece from 8 to 4 and then from 6 to 4 having rolled a 2 and a 4
+ * "22/off" represents moving a piece from 22 to home
+ * "bar/4" represents moving a piece from the bar to 4
+ * "6/4(3)" represents moving 3 pieces from 6 to 4
+ * "13/7*\/5" represents moving a piece from 13 to 7 and then from 7 to 5, hitting a piece on the way
+ */
+
+char move_buf[32];
 
 
 MODULE_IMPORT_FUNCTIONS(lcd, LCD_MODULE_ID, LCD_FUNCTION_EXPORTS);
@@ -25,6 +47,7 @@ gfx_t gfx;
 
 typedef struct {
   int8_t spaces[4*6+2];
+  int8_t bar[2]; // 0 is white, 1 is black
 }backgammon_board_t;
 
 typedef struct {
@@ -35,7 +58,13 @@ typedef struct {
 
 } backgammon_game_t;
 
-backgammon_board_t board;
+backgammon_game_t game;
+
+void roll_dice(backgammon_game_t *game);
+bool make_move(backgammon_game_t *game, const char *move, bool dry_run);
+bool moves_available(backgammon_game_t *game);
+void init_board(backgammon_board_t *board);
+void draw_board(backgammon_board_t *board);
 
 void roll_dice(backgammon_game_t *game) {
   game->movements[0] = rand() % 6 + 1;
@@ -49,23 +78,134 @@ void roll_dice(backgammon_game_t *game) {
   }
 }
 
-bool is_valid_move(backgammon_game_t *game, uint8_t /* from */, uint8_t to) {
-  int8_t num_pcs = game->board.spaces[to];
-  if (num_pcs > 0 && game->current_player == 1) {
-    return false;
-  } 
-  if (num_pcs < 0 && game->current_player == 2) {
-    return false;
+uint8_t parseint(const char **str) {
+  uint8_t result = 0;
+  while (**str >= '0' && **str <= '9') {
+    result = result * 10 + (**str - '0');
+    (*str)++;
   }
-  // check we have adeuate dice rolls
+  return result;
+}
+uint8_t advance_to(const char **str, char c) {
+  while (**str != c && **str != '\0') {
+    (*str)++;
+  }
+  if (**str == c) {
+    (*str)++;
+  }
+  return **str == '\0';
 }
 
-bool make_move(backgammon_game_t *game, uint8_t from, uint8_t to) {
-  if (!is_valid_move(game, from, to)) {
+void consume_prefix(const char **str, const char *prefix) {
+  while (*prefix != '\0' && **str == *prefix) {
+    (*str)++;
+    prefix++;
+  }
+  if (*prefix != '\0') {
+    // didn't match the prefix
+    *str = NULL;
+  }
+}
+
+bool make_move(backgammon_game_t *game, const char *_move, bool dry_run) {
+  // check some basic conditions
+
+  if (game->current_player != 1 && game->current_player != 2) {
+    return false; // invalid player
+  }
+
+  const char *move = _move;
+  uint8_t from, to;
+  int8_t *fromptr = NULL, *toptr = NULL;
+  if (strncmp(move, "bar", 3) == 0) {
+    move += 3; // bar
+    fromptr = &game->board.bar[game->current_player-1];
+    if (game->current_player == 1) {
+      from = BLACK_HOME;
+    } else if (game->current_player == 2) {
+      from = WHITE_HOME;
+    }
+  } else {
+    from = parseint(&move);
+    if (from > 24 || from < 1) {
+      return false; // invalid from space
+    }
+    fromptr = &game->board.spaces[from];
+  }
+  if (*move != '/') {
     return false;
   }
-  game->board.spaces[to] += game->board.spaces[from];
-  game->board.spaces[from] = 0;
+  move++;
+  
+  if (strncmp(move, "off", 3) == 0) {
+    move += 3; // off
+    if (game->current_player == 1) {
+      to = WHITE_HOME;
+    } else if (game->current_player == 2) {
+      to = BLACK_HOME;
+    }
+  } else {
+    to = parseint(&move);
+  }
+  toptr = &game->board.spaces[to];
+
+
+  if (*move != '\0' && *move != ' ' && *move != '*' && *move != '/') {
+    return false;
+  }
+  bool take = *move == '*';
+  if (take) {
+    move++;
+  }
+  int8_t num_pcs_from = game->board.spaces[from];
+  int8_t num_pcs_to = game->board.spaces[to];
+  int8_t move_dist = to - from;
+  int8_t sign = -1; // white
+  if (game->current_player == 2) {
+    num_pcs_from = -num_pcs_from;
+    num_pcs_to = -num_pcs_to;
+    move_dist = from - to;
+    sign = 1;   // black
+  }
+  if (num_pcs_from > 0) {
+    return false; // can't move opponent's pieces
+  } 
+  if (num_pcs_to > 1) {
+    return false; // can't move to a space with more than 1 opponent's piece
+  }
+  if (take != (num_pcs_to != 1)) {
+    return false; // can't take a piece if there isn't one there and must take if there is one there
+  }
+  if (move_dist < 1 || move_dist > 6) {
+    return false; // invalid move distance
+  }
+  uint8_t move_no = 255;
+  for (uint8_t i = 0; i < 4; i++) {
+    if (game->movements[i] == move_dist) {
+      move_no = i;
+      break;
+    }
+  }
+  if (move_no == 255) {
+    return false; // invalid move distance
+  }
+  if (take) {
+    *toptr += sign;
+    game->board.bar[game->current_player-1]++;
+  }
+  *fromptr -= sign;
+  *toptr   += sign;
+  game->movements[move_no] = 0;
+  if (dry_run) {
+    // undo all that again
+    *fromptr += sign;
+    *toptr   -= sign;
+    if (take) {
+      *toptr -= sign;
+      game->board.bar[game->current_player-1]--;
+    }
+    game->movements[move_no] = move_dist;
+  }
   return true;
 }
 
@@ -84,8 +224,7 @@ void init_board(backgammon_board_t *board) {
 
 }
 
-void draw_board() {
-  init_board(&board);
+void draw_board(backgammon_board_t *board) {
   uint16_t board_top = 3;
   uint16_t board_bottom = 240-3;
   uint16_t board_left = 3;
@@ -164,7 +303,7 @@ void draw_board() {
       tps[1], 
       tps[2]);
       
-    int8_t pcs = board.spaces[i+1];
+    int8_t pcs = board->spaces[i+1];
     gfx_colour_t col = pcs > 0 ? BLACK_PIECE_COLOUR : WHITE_PIECE_COLOUR;
     if (pcs < 0) {
       pcs = -pcs;
@@ -222,7 +361,7 @@ int main() {
   MODULE_CALL_THIS(gfx, fill, &gfx, RED);
   MODULE_CALL_THIS(gfx, nostroke, &gfx);
 
-  draw_board();
+  draw_board(&game.board);
   DDRB = 0x80;
   while(1) {
     // PINB = 0x80;

@@ -27,7 +27,47 @@ typedef struct {
   int8_t spaces[4*6+2];
 }backgammon_board_t;
 
+typedef struct {
+  backgammon_board_t board;
+  uint8_t turn_no;
+  uint8_t current_player; // 1 is white-, 2 is black+
+  uint8_t movements[4];
+
+} backgammon_game_t;
+
 backgammon_board_t board;
+
+void roll_dice(backgammon_game_t *game) {
+  game->movements[0] = rand() % 6 + 1;
+  game->movements[1] = rand() % 6 + 1;
+  if (game->movements[0] == game->movements[1]) {
+    game->movements[2] = rand() % 6 + 1;
+    game->movements[3] = rand() % 6 + 1;
+  } else {
+    game->movements[2] = 0;
+    game->movements[3] = 0;
+  }
+}
+
+bool is_valid_move(backgammon_game_t *game, uint8_t /* from */, uint8_t to) {
+  int8_t num_pcs = game->board.spaces[to];
+  if (num_pcs > 0 && game->current_player == 1) {
+    return false;
+  } 
+  if (num_pcs < 0 && game->current_player == 2) {
+    return false;
+  }
+  // check we have adeuate dice rolls
+}
+
+bool make_move(backgammon_game_t *game, uint8_t from, uint8_t to) {
+  if (!is_valid_move(game, from, to)) {
+    return false;
+  }
+  game->board.spaces[to] += game->board.spaces[from];
+  game->board.spaces[from] = 0;
+  return true;
+}
 
 void init_board(backgammon_board_t *board) {
   for (uint8_t i = 0; i < 4*6+2; i++) {
@@ -111,7 +151,7 @@ void draw_board() {
       if (i%12 >= 6) {
         tps[j].y += 10;
       }
-      if (i < 12) {
+      if (i >= 12) {
         tps[j].y = board_left + tps[j].y;
         tps[j].x = board_top + tps[j].x;
       } else {
@@ -134,7 +174,7 @@ void draw_board() {
         .x = tps[1].x,
         .y = tps[0].y,
       };
-      if (i < 12) {
+      if (i >= 12) {
         c.x += (k*2+1)*tw/2;
       } else {
         c.x -= (k*2+1)*tw/2;

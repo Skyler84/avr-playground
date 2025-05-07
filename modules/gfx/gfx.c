@@ -160,7 +160,18 @@ void gfx_rectangle(gfx_t *gfx, gfx_region_t r)
     }
 }
 
-void gfx_circle(gfx_t */* gfx */, gfx_coord_t /* center */, uint8_t /* radius */) {}
+void gfx_circle(gfx_t *gfx, gfx_coord_t center, uint8_t r) 
+{
+    uint16_t r2 = r*r;
+    if (gfx->fill) {
+        for (int16_t yoff = r-1; yoff > -r; yoff--) {
+            int16_t xoff;
+            for (xoff = 0; (uint16_t)(xoff*xoff + yoff*yoff) < r2; xoff++);
+            xoff--;
+            gfx_line_fill(gfx, (gfx_coord_t){center.x-xoff, center.y+yoff}, (gfx_coord_t){center.x+xoff, center.y+yoff});
+        }
+    }
+}
 void gfx_ellipse(gfx_t */* gfx */, gfx_coord_t /* focusA */, gfx_coord_t /* focusB */, uint8_t /* radius */) {}
 void gfx_triangle(gfx_t *gfx, gfx_coord_t a, gfx_coord_t b, gfx_coord_t c) 
 {

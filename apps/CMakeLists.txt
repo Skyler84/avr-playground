@@ -30,6 +30,7 @@ function(make_avr_app target)
     )
 endfunction()
 
+add_subdirectory(games)
 
 add_subdirectory(blinky)
 add_subdirectory(audio_test)

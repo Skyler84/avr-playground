@@ -40,6 +40,9 @@ int main() {
   MODULE_CALL_THIS(gfx, line, &gfx, (gfx_coord_t){110, 110}, (gfx_coord_t){120, 130});
   MODULE_CALL_THIS(gfx, rectangle, &gfx, (gfx_region_t){50, 50, 100, 100});
   MODULE_CALL_THIS(gfx, triangle, &gfx, (gfx_coord_t){150, 150}, (gfx_coord_t){200, 150}, (gfx_coord_t){150, 180});
+  MODULE_CALL_THIS(gfx, nostroke, &gfx);
+  MODULE_CALL_THIS(gfx, fill, &gfx, BLUE);
+  MODULE_CALL_THIS(gfx, circle, &gfx, (gfx_coord_t){100, 200}, 50);
   DDRB = 0x80;
   while(1) {
     PINB = 0x80;

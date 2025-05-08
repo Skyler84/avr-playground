@@ -199,21 +199,21 @@ void lcd_region_set(display_t*, display_region_t r) {
 
 void lcd_fill(display_t*, display_colour_t col, uint32_t n) {
   write_cmd(MEMORY_WRITE);
-  for (uint32_t i=0; i<n; i++) {
+  for (; n ; --n) {
     write_data16(col);
   }
 }
 
 void lcd_fill_indexed(display_t*, display_colour_t *col, uint32_t n) {
   write_cmd(MEMORY_WRITE);
-  for (uint32_t i=0; i<n; i++) {
+  for (; n; --n) {
     write_data16(*col++);
   }
 }
 
 void lcd_fill_indexedP(display_t*, display_colour_t *col, uint32_t n) {
   write_cmd(MEMORY_WRITE);
-  for (uint32_t i=0; i<n; i++) {
+  for (; n; --n) {
     write_data16(pgm_read_word_elpm(col++));
   }
 }

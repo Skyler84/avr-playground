@@ -4,14 +4,26 @@ function(make_avr_app target)
     if(NOT app_module_start)
         set (app_module_start 0x0000)
     endif()
+
+    set(app ${target}.app)
+    add_executable(${app})
+    add_dependencies(${app} ${target})
+    set_target_properties(${app} PROPERTIES
+        SOURCES $<TARGET_PROPERTY:${target},SOURCES>
+        LINK_MODULES $<TARGET_PROPERTY:${target},LINK_MODULES>
+        LINK_MODULES_BINS $<TARGET_PROPERTY:${target},LINK_MODULES_BINS>
+        INCLUDE_DIRECTORIES $<TARGET_PROPERTY:${target},INCLUDE_DIRECTORIES>
+        LINK_LIBRARIES $<TARGET_PROPERTY:${target},LINK_LIBRARIES>
+    )
+
     add_custom_command(
-        TARGET ${target}
+        TARGET ${app}
         POST_BUILD
         BYPRODUCTS ${app}.hex ${app}.bin ${app}.all.hex
         COMMAND avr-size ${target}
-        COMMAND cp ${target} ${app}.elf
-        COMMAND avr-objcopy -O ihex ${target} ${app}.hex
-        COMMAND avr-objcopy -O binary ${target} ${app}.bin
+        COMMAND cp ${app} ${app}.elf
+        COMMAND avr-objcopy -O ihex ${app} ${app}.hex
+        COMMAND avr-objcopy -O binary ${app} ${app}.bin
         COMMAND cat "$<TARGET_PROPERTY:${target},LINK_MODULES_BINS>" > ${app}.mods.bin
         COMMAND "$<$<BOOL:$<TARGET_PROPERTY:${target},LINK_MODULES_BINS>>:avr-objcopy;-I;binary;-O;ihex;${app}.mods.bin;${app}.mods.hex;--change-addresses;${app_module_start}>"
         COMMAND srec_cat -O ${app}.all.hex "$<$<BOOL:$<TARGET_PROPERTY:${target},LINK_MODULES_BINS>>:-Intel;${app}.mods.hex>" -Intel ${app}.hex -Intel || { echo "Try increasing APP_MODULE_START_ADDRESS for target ${target}" \\\; exit 1 \\\; }
@@ -19,12 +31,12 @@ function(make_avr_app target)
     )
 
     add_custom_target(
-        ${target}_flash
+        ${app}_flash
         DEPENDS ${app}.hex
         COMMAND avrdude -p ${MCU} -c ${PROGRAMMER} -U flash:w:${app}.hex
     )
     add_custom_target(
-        ${target}_flash_all
+        ${app}_flash_all
         DEPENDS ${app}.all.hex
         COMMAND avrdude -p ${MCU} -c ${PROGRAMMER} -U flash:w:${app}.all.hex
     )

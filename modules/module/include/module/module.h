@@ -13,7 +13,7 @@ typedef uint16_t module_id_t;
 typedef uint16_t module_fn_id_t;
 typedef void (*fn_ptr_t)();
 
-#define pgm_ptr_to_fn_ptr(p) ((((uintptr_t)p)/2))
+#define pgm_ptr_to_fn_ptr(p) ((uintptr_t)((p)/2))
 
 typedef struct {
   module_fn_id_t id;
@@ -62,7 +62,7 @@ typedef enum modname##_function_id_t{\
 // --------------------------------
 
 #define DEFINE_IMPORTED_FN(modname, name, ...)\
-  modname##_##name##_fn_t name;
+  modname##_##name##_fn_t modname##_##name;
 
 #define DEFINE_IMPORTED_FNS(modname, exports)\
   modname##_fns_t modname##_fns
@@ -123,6 +123,7 @@ typedef struct modname##_fns_t{\
   o(modname, find_by_id, moduleptr_t, module_id_t)\
   o(modname, init_fns, void, fn_ptr_t fns[], module_id_t id, uint16_t fn_ids[])
 
+extern void module_runtime_init_error_handler(module_id_t, moduleptr_t*, uint16_t, fn_ptr_t *);
 
 
 #define MODULE_API_VER 0x0001

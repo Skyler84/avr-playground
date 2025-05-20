@@ -20,5 +20,6 @@ enum msgbox_type_t {
 
 
 extern void gui_init(GUI_t *gui);
-extern int8_t gui_msgboxP(GUI_t *gui, const char *msg, enum msgbox_type_t type);
+extern int8_t gui_msgboxP(GUI_t *gui, uint32_t msgP, enum msgbox_type_t type);
+extern int8_t gui_msgbox(GUI_t *gui, const char* msg, enum msgbox_type_t type);
 extern int8_t gui_choose_file(GUI_t *gui, FileSystem_t *fs, const char *path);

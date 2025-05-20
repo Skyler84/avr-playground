@@ -1,4 +1,5 @@
 #include "module/module.h"
+#include "module/pic.h"
 
 #include <avr/pgmspace.h>
 #include <stddef.h>
@@ -16,11 +17,11 @@ fn_ptr_t module_fn_lookup(uint16_t _id, moduleptr_t module) {
     return NULL;
   }
   uint16_t id;
-  while ((id = pgm_read_word_far(fn + offsetof(module_fn_t, id))) != 0x0000U) {
+  while ((id = pgm_read_word_far(fn + (uint32_t)offsetof(module_fn_t, id))) != 0x0000U) {
     if (id == _id) {
-      return (fn_ptr_t)(pgm_read_word_far(fn + offsetof(module_fn_t, fn)) + pgm_ptr_to_fn_ptr(module));
+      return (fn_ptr_t)(pgm_read_word_far(fn + (uint32_t)offsetof(module_fn_t, fn)) + pgm_ptr_to_fn_ptr(module));
     }
-    fn++;
+    fn+= sizeof(module_fn_t); 
   }
   return NULL;
 }
@@ -52,11 +53,20 @@ moduleptr_t module_find_by_id(module_id_t id) {
 void module_init_fns(fn_ptr_t fns[], module_id_t id, uint16_t fn_ids[]) {
   moduleptr_t module = module_find_by_id(id);
   if (module == (moduleptr_t)0) {
-    return;
+    indirect_call(module_runtime_init_error_handler)(id, &module, 0, NULL);
   }
   for (uint8_t i = 0; fn_ids[i]; i++) {
     fns[i] = module_fn_lookup(fn_ids[i], module);
+    if (fns[i] == NULL) {
+      indirect_call(module_runtime_init_error_handler)(id, &module, fn_ids[i], &fns[i]);
+    }
   }
+}
+
+void module_runtime_init_error_handler(module_id_t, moduleptr_t*, uint16_t, fn_ptr_t *) __attribute__((weak));
+void module_runtime_init_error_handler(module_id_t, moduleptr_t*, uint16_t, fn_ptr_t *) 
+{
+  while(1);
 }
 
 REGISTER_MODULE(module, MODULE_MODULE_ID, MODULE_FUNCTION_EXPORTS, MODULE_API_VER);

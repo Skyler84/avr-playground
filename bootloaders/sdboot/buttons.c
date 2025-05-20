@@ -8,7 +8,7 @@ struct btn_t
     uint8_t bit;
 };
 
-static struct btn_t btns[] = {
+static const struct btn_t btns[] = {
     {&PINE, 0x80}, // BTN_C
     {&PINC, 0x04}, // BTN_N
     {&PINC, 0x08}, // BTN_E

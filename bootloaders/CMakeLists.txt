@@ -25,9 +25,11 @@ function(make_avr_bootloader target)
     )
 
     add_custom_command(
-        TARGET ${app}
-        POST_BUILD
-        BYPRODUCTS ${app}.hex ${app}.bin ${app}.all.hex
+        # TARGET ${app}
+        # POST_BUILD
+        # BYPRODUCTS ${app}.hex ${app}.bin ${app}.all.hex ${app}.gdbinit
+        OUTPUT ${app}.hex ${app}.bin ${app}.all.hex
+    DEPENDS ${app} $<TARGET_PROPERTY:${target},LINK_MODULES_BINS>
         COMMAND avr-size ${app}
         COMMAND cp ${app} ${app}.elf
         COMMAND avr-objcopy -O ihex ${app} ${app}.hex
@@ -36,6 +38,7 @@ function(make_avr_bootloader target)
         COMMAND "$<$<BOOL:$<TARGET_PROPERTY:${target},LINK_MODULES_BINS>>:avr-objcopy;-I;binary;-O;ihex;${app}.mods.bin;${app}.mods.hex;--change-addresses;${boot_module_start}>"
         COMMAND srec_cat -O ${app}.all.hex "$<$<BOOL:$<TARGET_PROPERTY:${target},LINK_MODULES_BINS>>:-Intel;${app}.mods.hex>" -Intel ${app}.hex -Intel || { echo "Try lowering BOOT_MODULE_START_ADDRESS for target ${target}" \\\; exit 1 \\\; }
         COMMAND avr-objcopy -I ihex -O elf32-avr ${app}.all.hex ${app}.all.elf
+        COMMAND avr-objcopy -I ihex -O binary ${app}.all.hex ${app}.all.bin
         COMMAND avr-size ${app}.all.hex
         COMMAND_EXPAND_LISTS
     )

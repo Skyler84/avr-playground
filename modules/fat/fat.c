@@ -1,8 +1,14 @@
 #include "fat/fat.h"
+#include "module/pic.h"
 
 MODULE_FN_PROTOS(fat, FAT_FUNCTION_EXPORTS)
 
 #define FAT_MAX_HANDLES(fs) 4
+
+int __mulsi3(int a, int b)
+{
+  return a*b;
+}
 
 
 static FAT_SectorCache_t* fat_cache_sector(FAT_FileSystem_t *fs, uint32_t sector) {
@@ -63,24 +69,24 @@ static uint32_t fat_data_start_sector(FAT_FileSystem_t *fs) {
   uint32_t reserved_sectors = fs->reserved_sectors;
   uint32_t num_FATs = fs->num_FATs;
   uint32_t sectors_per_FAT = fs->sectors_per_FAT;
-  uint32_t root_dir_start_sector = reserved_sectors + (num_FATs * sectors_per_FAT);
+  uint32_t root_dir_start_sector = reserved_sectors + indirect_call(__mulsi3)(num_FATs, sectors_per_FAT);
   uint32_t root_dir_sectors = 0; // (fs->sectors_per_cluster * 32 + fs->sectors_per_cluster - 1) / fs->sectors_per_cluster;
   return root_dir_start_sector + root_dir_sectors;
 }
 
 static uint32_t fat_root_start_sector(FAT_FileSystem_t *fs) {
   if (fs->root_cluster == 0) {
-    return fs->reserved_sectors + (fs->num_FATs * fs->sectors_per_FAT);
+    return fs->reserved_sectors + indirect_call(__mulsi3)(fs->num_FATs, fs->sectors_per_FAT);
   } else {
-    return fat_data_start_sector(fs) + ((fs->root_cluster - 2) * fs->sectors_per_cluster);
+    return fat_data_start_sector(fs) + indirect_call(__mulsi3)((fs->root_cluster - 2), fs->sectors_per_cluster);
   }
 }
 
 static uint32_t fat_cluster_sector_start(FAT_FileSystem_t *fs, uint32_t cluster) {
   if (cluster == 0) {
-    return fs->reserved_sectors + (fs->num_FATs * fs->sectors_per_FAT);
+    return fs->reserved_sectors + indirect_call(__mulsi3)(fs->num_FATs, fs->sectors_per_FAT);
   } else {
-    return fat_data_start_sector(fs) + ((cluster - 2) * fs->sectors_per_cluster);
+    return indirect_call(fat_data_start_sector)(fs) + indirect_call(__mulsi3)((cluster - 2), fs->sectors_per_cluster);
   }
 }
 
@@ -102,17 +108,18 @@ static void fat_cluster_init(FAT_FileSystem_t *fs, Cluster_t *cluster, uint32_t 
   cluster->current_cluster = cluster_no;
   if (cluster_no == 0) {
     cluster->next_cluster = 0x0ffffff8; // end of chain
-    cluster->sector_count = (fs->root_entries * 16 + fs->sectors_per_cluster-1)/fs->sectors_per_cluster;
+    // cluster->sector_count = indirect_call(__mulsi3)(fs->root_entries, 16 + fs->sectors_per_cluster-1)/ fs->sectors_per_cluster;
+    cluster->sector_count = indirect_call(__udivmodsi4)(indirect_call(__mulsi3)(fs->root_entries, 16 + fs->sectors_per_cluster-1), fs->sectors_per_cluster, 0);
   } else {
     cluster->sector_count = fs->sectors_per_cluster;
-    cluster->next_cluster = fat_cluster_chain_next(fs, cluster_no);
+    cluster->next_cluster = indirect_call(fat_cluster_chain_next)(fs, cluster_no);
   }
 }
 
 static void fat_cluster_chain_init(FAT_FileSystem_t *fs, ClusterChain_t *chain, uint32_t start_cluster) {
   chain->start_cluster = start_cluster;
   chain->current_seq_cluster = 0;
-  fat_cluster_init(fs, &chain->cluster, start_cluster);
+  indirect_call(fat_cluster_init)(fs, &chain->cluster, start_cluster);
 }
 
 static file_descriptor_t fat_get_handle(FAT_FileSystem_t *fs) {
@@ -145,8 +152,8 @@ static fstatus_t fat_navigate_directory(FAT_FileSystem_t *fs, file_descriptor_t 
     // now we need to find the file in the directory
     FileInfo_t dir_entry;
     fstatus_t ret = 0;
-    fat_readdir(fs, fd, NULL);
-    while ((ret = fat_readdir(fs, fd, &dir_entry)) == 0) {
+    indirect_call(fat_readdir)(fs, fd, NULL);
+    while ((ret = indirect_call(fat_readdir)(fs, fd, &dir_entry)) == 0) {
       uint32_t cluster_num = dir_entry.inode;
       if (dir_entry.type != 2 && lastchar == '/') {
         // not a directory
@@ -199,8 +206,9 @@ void fat_init(FAT_FileSystem_t *fs, BlockDev *bd)
   }
 }
 
-fstatus_t fat_mount(FAT_FileSystem_t *fs, bool readonly, bool mkfs) 
+fstatus_t fat_mount(FileSystem_t *_fs, bool readonly, bool mkfs) 
 {
+  FAT_FileSystem_t *fs = (FAT_FileSystem_t*)_fs;
   (void)readonly;
   (void)mkfs;
   
@@ -242,11 +250,11 @@ err:
   cache->busy = 0;
   return ret;
 }
-void fat_umount(FAT_FileSystem_t *fs) 
+void fat_umount(FileSystem_t *fs) 
 {
   (void)fs;
 }
-fstatus_t fat_stat(FAT_FileSystem_t *fs, const char *filename, struct FileInfo *st) 
+fstatus_t fat_stat(FileSystem_t *fs, const char *filename, struct FileInfo *st) 
 { 
   (void)fs;
   (void)filename;
@@ -254,7 +262,7 @@ fstatus_t fat_stat(FAT_FileSystem_t *fs, const char *filename, struct FileInfo *
 
   return 0; 
 }
-file_descriptor_t fat_open(FAT_FileSystem_t *fs, const char *filename, uint8_t mode) 
+file_descriptor_t fat_open(FileSystem_t *fs, const char *filename, uint8_t mode) 
 { 
   (void)fs;
   (void)filename;
@@ -262,7 +270,7 @@ file_descriptor_t fat_open(FAT_FileSystem_t *fs, const char *filename, uint8_t m
 
   return 0; 
 }
-file_descriptor_t fat_openat(FAT_FileSystem_t *fs, file_descriptor_t dir, const char *filename, uint8_t mode) 
+file_descriptor_t fat_openat(FileSystem_t *fs, file_descriptor_t dir, const char *filename, uint8_t mode) 
 { 
   (void)fs;
   (void)dir;
@@ -271,8 +279,9 @@ file_descriptor_t fat_openat(FAT_FileSystem_t *fs, file_descriptor_t dir, const 
   
   return 0; 
 }
-void fat_close(FAT_FileSystem_t *fs, file_descriptor_t fd) 
+void fat_close(FileSystem_t *_fs, file_descriptor_t fd) 
 {
+  FAT_FileSystem_t *fs = (FAT_FileSystem_t*)_fs;
   if (fs->handles[fd].handle_type != 1) {
     return; // already closed
   }
@@ -281,7 +290,7 @@ void fat_close(FAT_FileSystem_t *fs, file_descriptor_t fd)
   fs->handles[fd].size = 0;
   fat_flush_sector(fs, fs->handles[fd].cluster_chain.cluster.sector_start);
 }
-fstatus_t fat_seek(FAT_FileSystem_t *fs, file_descriptor_t fd, uint32_t offset) 
+fstatus_t fat_seek(FileSystem_t *fs, file_descriptor_t fd, uint32_t offset) 
 { 
   (void)fs;
   (void)fd;
@@ -289,8 +298,9 @@ fstatus_t fat_seek(FAT_FileSystem_t *fs, file_descriptor_t fd, uint32_t offset)
 
   return 0; 
 }
-fstatus_t fat_read(FAT_FileSystem_t *fs, file_descriptor_t fd, char *_buf, uint16_t size) 
+fstatus_t fat_read(FileSystem_t *_fs, file_descriptor_t fd, char *_buf, uint16_t size) 
 { 
+  FAT_FileSystem_t *fs = (FAT_FileSystem_t*)_fs;
   if (fs->handles[fd].handle_type != 1) {
     return -1; // not a file
   }
@@ -309,7 +319,7 @@ fstatus_t fat_read(FAT_FileSystem_t *fs, file_descriptor_t fd, char *_buf, uint1
       fs->handles[fd].cluster_chain.cluster.sector_start++;
       fs->handles[fd].cluster_chain.cluster.sector_count--;
       if ( fs->handles[fd].cluster_chain.cluster.sector_count == 0) {
-        fat_cluster_init(fs, &fs->handles[fd].cluster_chain.cluster, fs->handles[fd].cluster_chain.cluster.next_cluster);
+        indirect_call(fat_cluster_init)(fs, &fs->handles[fd].cluster_chain.cluster, fs->handles[fd].cluster_chain.cluster.next_cluster);
         fs->handles[fd].cluster_chain.current_seq_cluster++;
       }
     } else {
@@ -318,7 +328,7 @@ fstatus_t fat_read(FAT_FileSystem_t *fs, file_descriptor_t fd, char *_buf, uint1
   } while (size && (fs->handles[fd].cluster_chain.cluster.current_cluster & 0x0ffffff8ul) != 0x0ffffff8ul);
   return buf - _buf; 
 }
-fstatus_t fat_write(FAT_FileSystem_t *fs, file_descriptor_t fd, const char *buf, uint16_t size) 
+fstatus_t fat_write(FileSystem_t *fs, file_descriptor_t fd, const char *buf, uint16_t size) 
 { 
   (void)fs;
   (void)fd;
@@ -327,14 +337,14 @@ fstatus_t fat_write(FAT_FileSystem_t *fs, file_descriptor_t fd, const char *buf,
 
   return 0; 
 }
-fstatus_t fat_unlink(FAT_FileSystem_t *fs, const char *filename) 
+fstatus_t fat_unlink(FileSystem_t *fs, const char *filename) 
 { 
   (void)fs;
   (void)filename;
 
   return 0; 
 }
-fstatus_t fat_rename(FAT_FileSystem_t *fs, const char *oldname, const char *newname) 
+fstatus_t fat_rename(FileSystem_t *fs, const char *oldname, const char *newname) 
 { 
   (void)fs;
   (void)oldname;
@@ -342,12 +352,12 @@ fstatus_t fat_rename(FAT_FileSystem_t *fs, const char *oldname, const char *newn
 
   return 0; 
 }
-void fat_mkdir(FAT_FileSystem_t *fs, const char *dirname) 
+void fat_mkdir(FileSystem_t *fs, const char *dirname) 
 {
   (void)fs;
   (void)dirname;
 }
-void fat_rmdir(FAT_FileSystem_t *fs, const char *dirname) 
+void fat_rmdir(FileSystem_t *fs, const char *dirname) 
 {
   (void)fs;
   (void)dirname;
@@ -355,7 +365,6 @@ void fat_rmdir(FAT_FileSystem_t *fs, const char *dirname)
 
 file_descriptor_t fat_opendir(FAT_FileSystem_t *fs, const char *dirname) 
 { 
-
   // we don't support relative paths. 
   // relative paths are handled by the VFS layer
   // we only support absolute paths 
@@ -390,7 +399,7 @@ file_descriptor_t fat_opendirat(FAT_FileSystem_t *fs, file_descriptor_t dir, con
   fs->handles[i].size = 0; // size is unknown
   // get root dir clusterchain
   fat_cluster_chain_init(fs, &fs->handles[i].cluster_chain, dir_cluster);
-  if (fat_navigate_directory(fs, i, (char*)dirname) != 0) {
+  if (indirect_call(fat_navigate_directory)(fs, i, (char*)dirname) != 0) {
     goto err;
   }
   if (fs->handles[i].handle_type != 2) {
@@ -435,7 +444,7 @@ fstatus_t fat_readdir(FAT_FileSystem_t *fs, file_descriptor_t fd, struct FileInf
   while(i++<32) {
     fstatus_t ret = 32;
     fs->handles[fd].handle_type = 1;
-    ret = fat_read(fs, fd, (char*)&dir_entry, sizeof(FAT_DirectoryEntry_t));
+    ret = indirect_call(fat_read)(&fs->fs, fd, (char*)&dir_entry, sizeof(FAT_DirectoryEntry_t));
     fs->handles[fd].handle_type = 2;
     if (ret < (long)sizeof(FAT_DirectoryEntry_t)) {  
       return -i; // error reading directory

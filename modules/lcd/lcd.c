@@ -100,13 +100,13 @@ inline static void write_data16(uint16_t data) {
     __result;                               \
 }))
 
-static void NOINLINE write_cmd_data_seq_P(const uint8_t *seq) {
+static void NOINLINE write_cmd_data_seq_P(uint32_t seqP) {
   uint8_t cmd;
-  while((cmd = pgm_read_byte_elpm(seq++)) != 0) {
+  while((cmd = pgm_read_byte_far(seqP++)) != 0) {
     write_cmd(cmd);
-    uint8_t ndata = pgm_read_byte_elpm(seq++);
+    uint8_t ndata = pgm_read_byte_far(seqP++);
     for (uint8_t i=0; i<ndata; i++) {
-      uint8_t data = pgm_read_byte_elpm(seq++);
+      uint8_t data = pgm_read_byte_far(seqP++);
       write_data(data);
     }
   }
@@ -126,7 +126,6 @@ static void NOINLINE lcd_set_window(lcd_xcoord_t xs, lcd_xcoord_t xe, lcd_ycoord
 MODULE_FN_PROTOS(lcd, LCD_FUNCTION_EXPORTS)
 
 void lcd_init(display_t*) {
-
 #ifdef __AVR_AT90USB1286__
   
   XMCRB = _BV(XMM2) | _BV(XMM1);
@@ -176,7 +175,7 @@ void lcd_init(display_t*) {
     MEMORY_WRITE, 0,
     0
   };
-  write_cmd_data_seq_P(init_seq+GET_MODULE_DATA_PTR_OFFSET());
+  write_cmd_data_seq_P((uintptr_t)init_seq+GET_MODULE_DATA_PTR_OFFSET());
   // write_cmd_data_seq_P(init_seq);
     /* Clear display */
 	for(x=0; x<240; x++)
@@ -199,6 +198,10 @@ void lcd_region_set(display_t*, display_region_t r) {
 
 void lcd_fill(display_t*, display_colour_t col, uint32_t n) {
   write_cmd(MEMORY_WRITE);
+  // (void)col;
+  // for (uint32_t i = 0; i < n; i++) {
+  //   write_data16(RED);
+  // }
   for (; n ; --n) {
     write_data16(col);
   }

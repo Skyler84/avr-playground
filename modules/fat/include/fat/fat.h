@@ -97,18 +97,7 @@ typedef struct FAT_Handle {
   };
 } FAT_Handle_t;
 
-typedef struct FAT_FileSystem {
-  FileSystem_t fs;
-  const BlockDev *bd;
-  FAT_SectorCache_t cache[1];
-  uint32_t reserved_sectors;
-  uint32_t num_FATs;
-  uint32_t sectors_per_FAT;
-  uint32_t sectors_per_cluster;
-  uint32_t root_entries;
-  uint32_t root_cluster;
-  FAT_Handle_t handles[4];
-} FAT_FileSystem_t;
+typedef struct FAT_FileSystem FAT_FileSystem_t;
 
 typedef struct {
   char filename[8];
@@ -132,20 +121,8 @@ extern FileInfo_t dir_entry;
 
 #define _(...)
 #define FAT_FUNCTION_EXPORTS(modname, o) \
+  FS_FUNCTION_INTERFACE(modname, o)\
   o(modname, init          , void              , FAT_FileSystem_t*, BlockDev *bd)                                 \
-  o(modname, mount         , fstatus_t         , FAT_FileSystem_t*, bool, bool)                                 \
-  o(modname, umount        , void              , FAT_FileSystem_t*)                                 \
-  o(modname, stat          , fstatus_t         , FAT_FileSystem_t*, const char*, struct FileInfo *st)                                        \
-  o(modname, open          , file_descriptor_t , FAT_FileSystem_t*, const char*, uint8_t mode)               \
-  o(modname, openat        , file_descriptor_t , FAT_FileSystem_t*, file_descriptor_t, const char*, uint8_t mode)               \
-  o(modname, close         , void              , FAT_FileSystem_t*, file_descriptor_t)               \
-  o(modname, seek          , fstatus_t         , FAT_FileSystem_t*, file_descriptor_t, uint32_t)               \
-  o(modname, read          , fstatus_t         , FAT_FileSystem_t*, file_descriptor_t, char*, uint16_t)                    \
-  o(modname, write         , fstatus_t         , FAT_FileSystem_t*, file_descriptor_t, const char*, uint16_t)              \
-  o(modname, unlink        , fstatus_t         , FAT_FileSystem_t*, const char*)                                                            \
-  o(modname, rename        , fstatus_t         , FAT_FileSystem_t*, const char*, const char*)                                                            \
-  o(modname, mkdir         , void              , FAT_FileSystem_t*, const char*)                \
-  o(modname, rmdir         , void              , FAT_FileSystem_t*, const char*)                \
   o(modname, opendir       , file_descriptor_t , FAT_FileSystem_t*, const char*)                \
   o(modname, opendirat     , file_descriptor_t , FAT_FileSystem_t*, file_descriptor_t, const char*)                \
   o(modname, closedir      , void              , FAT_FileSystem_t*, file_descriptor_t)                \
@@ -156,3 +133,19 @@ extern FileInfo_t dir_entry;
 #define FAT_MODULE_ID 0x0105
 
 DECLARE_MODULE(fat, FAT_MODULE_ID, FAT_FUNCTION_EXPORTS);
+
+struct FAT_FileSystem {
+  union{
+    fat_fns_t *fns;
+    FileSystem_t fs;
+  };
+  const BlockDev *bd;
+  FAT_SectorCache_t cache[1];
+  uint32_t reserved_sectors;
+  uint32_t num_FATs;
+  uint32_t sectors_per_FAT;
+  uint32_t sectors_per_cluster;
+  uint32_t root_entries;
+  uint32_t root_cluster;
+  FAT_Handle_t handles[4];
+};

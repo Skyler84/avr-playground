@@ -2,7 +2,6 @@
 
 #include "display/display.h"
 #include "module/module.h"
-#include "fonts/fonts.h"
 #define _(...)
 
 typedef display_xcoord_t lcd_xcoord_t;
@@ -46,7 +45,7 @@ DECLARE_MODULE(lcd, LCD_MODULE_ID, LCD_FUNCTION_EXPORTS);
 
 struct lcd{
     union{
-        lcd_fns_t *fns;
         display_t display;
+        lcd_fns_t *fns;
     };
 };

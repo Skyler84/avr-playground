@@ -13,11 +13,11 @@ target_include_directories(lcd
 target_link_modules(lcd
     PRIVATE
         module
-        fonts
 )
 target_link_libraries(lcd
     PUBLIC
         display
         blockdev
         fs
+        font
 )

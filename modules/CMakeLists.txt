@@ -28,7 +28,7 @@ function(target_link_modules target)
             message(STATUS "${link_modules}")
             set_property(TARGET ${TARGET} APPEND PROPERTY LINK_MODULES "mod_${module}")
             get_target_property(mod_bin mod_${module} BINFILE)
-            add_dependencies(${TARGET} mod_${module})
+            add_dependencies(${TARGET} mod_${module} )
             set_property(TARGET ${TARGET} APPEND PROPERTY LINK_MODULES_BINS "${mod_bin}")
         else()
             message (FATAL_ERROR "Module ${module} not found")
@@ -62,10 +62,12 @@ function(add_module name)
     add_custom_command(
         TARGET mod_${name}
         POST_BUILD
-        BYPRODUCTS mod_${name}.hex mod_${name}.bin
+        BYPRODUCTS mod_${name}.bin
+        # OUTPUT mod_${name}.elf mod_${name}.bin
+        # DEPENDS mod_${name} ${CMAKE_SOURCE_DIR}/modules/check_module.sh
+        COMMAND ${CMAKE_SOURCE_DIR}/modules/check_module.sh mod_${name}
         COMMAND avr-size mod_${name}
         COMMAND cp mod_${name} mod_${name}.elf
-        COMMAND avr-objcopy -O ihex mod_${name} mod_${name}.hex
         COMMAND avr-objcopy -O binary mod_${name} mod_${name}.bin
         COMMAND_EXPAND_LISTS
         VERBATIM
@@ -109,19 +111,24 @@ function(add_module name)
     target_compile_options(mod_${name}
         PRIVATE
             "$<TARGET_PROPERTY:${name},COMPILE_OPTIONS>"
+            -B ${CMAKE_SOURCE_DIR}/modules/module/device-specs
+    )
+    target_link_options(mod_${name}
+        PRIVATE
+            "$<TARGET_PROPERTY:${name},LINK_OPTIONS>"
+            -B ${CMAKE_SOURCE_DIR}/modules/module/device-specs
     )
     # target_link_libraries(mod_${name}
     #     PRIVATE
     #         "$<TARGET_PROPERTY:${name},LINK_LIBRARIES>"
     # )
     if (NOT ${name} STREQUAL "module")
-        target_link_libraries(mod_${name} INTERFACE mod_interface_module)
+        target_link_libraries(${name} INTERFACE mod_interface_module)
     endif()
 endfunction()
 
 add_subdirectory(module)
-add_subdirectory(fonts)
-# add_subdirectory(blockdev)
+add_subdirectory(font5x7)
 add_subdirectory(lcd)
 add_subdirectory(sd)
 add_subdirectory(fat)

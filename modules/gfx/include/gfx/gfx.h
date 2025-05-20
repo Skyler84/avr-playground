@@ -2,9 +2,10 @@
 
 #include "module/module.h"
 #include "display/display.h"
-#include "fonts/fonts.h"
+#include "font/font.h"
 
 #include <stdbool.h>
+#include <inttypes.h>
 
 typedef display_coord_t gfx_coord_t;
 typedef display_region_t gfx_region_t;
@@ -28,9 +29,10 @@ typedef struct gfx gfx_t;
     o(modname, ellipse, void, gfx_t *gfx, gfx_coord_t focusA, gfx_coord_t focusB, uint8_t radius) \
     o(modname, triangle, void, gfx_t *gfx, gfx_coord_t a, gfx_coord_t b, gfx_coord_t c) \
     o(modname, arc, void, gfx_t *gfx, gfx_coord_t center, uint8_t radiusX, uint8_t radiusY, uint16_t startAngle, uint16_t endAngle) \
+    o(modname, char, void, gfx_t *gfx, gfx_coord_t pos, char c) \
     o(modname, text, void, gfx_t *gfx, gfx_region_t box, const char *text) \
-    o(modname, textP, void, gfx_t *gfx, gfx_region_t coord, const char *text) \
-    o(modname, textSize, void, gfx_t *gfx) \
+    o(modname, textP, void, gfx_t *gfx, gfx_region_t coord, uint_farptr_t textP) \
+    o(modname, textSize, void, gfx_t *gfx, uint16_t scale_pt) \
     o(modname, textFont, void, gfx_t *gfx, font_t *font)
 
 #define GFX_MODULE_ID 0x0108
@@ -46,5 +48,6 @@ struct gfx {
     gfx_colour_t strokeColour;
     gfx_colour_t fillColour;
     font_t *font;
+    uint16_t textSize;
 
 };

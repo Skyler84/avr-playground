@@ -2,19 +2,22 @@
 #include "display/display.h"
 #include "module/imports.h"
 #include "module/pic.h"
-#include "fonts/fonts.h"
+#include "font/font.h"
 #include "gfx/gfx.h"
 #include "encoder.h"
 #include "buttons.h"
 #include <stdint.h>
 #include <avr/pgmspace.h>
 #include <util/delay.h>
+#include <string.h>
+#include <alloca.h>
 
 
-static size_t my_strlen_P(const char __flash1 *s)
+static size_t my_strlen_P(uint32_t sP)
 {
     size_t len = 0;
-    while (*s++)
+    char c;
+    while ((c = pgm_read_byte_far(sP++)))
     {
         len++;
     }
@@ -97,9 +100,10 @@ void gui_init(GUI_t *gui)
     __result;                               \
 }))
 
-int8_t gui_msgboxP(GUI_t *gui, const char *msg, enum msgbox_type_t type)
+int8_t gui_msgbox(GUI_t *gui, const char* msg, enum msgbox_type_t type)
 {
     (void)gui;
+    (void)type;
     type = 0;
     display_xcoord_t boxw = 200;
     display_ycoord_t boxh = 80;
@@ -109,12 +113,13 @@ int8_t gui_msgboxP(GUI_t *gui, const char *msg, enum msgbox_type_t type)
         .y1 = 120 - boxh / 2,
         .y2 = 120 + boxh / 2,
     };
-    MODULE_CALL_THIS(gfx, fill, gui->gfx, 0x0000);
+    MODULE_CALL_THIS(gfx, fill, gui->gfx, BLUE);
     MODULE_CALL_THIS(gfx, nostroke, gui->gfx);
     MODULE_CALL_THIS(gfx, rectangle, gui->gfx, region);
-    int len = my_strlen_P(msg);
-    MODULE_CALL_THIS(gfx, stroke, gui->gfx, BLACK);
-    MODULE_CALL_THIS(gfx, textP, gui->gfx, ((display_region_t){160 - 3 * len, 0, 0, 20}), msg);
+    int len = strlen(msg);
+    MODULE_CALL_THIS(gfx, fill, gui->gfx, WHITE);
+    MODULE_CALL_THIS(gfx, textSize, gui->gfx, 12);
+    MODULE_CALL_THIS(gfx, text, gui->gfx, ((display_region_t){160 - 3 * len, 130-boxh/3, 0, 0}), msg);
     uint8_t btn_count = 0;
     for (uint8_t i = 0; i < 3; i++)
     {
@@ -141,24 +146,37 @@ int8_t gui_msgboxP(GUI_t *gui, const char *msg, enum msgbox_type_t type)
         if (btn_id > 7)
             continue;
         const char *s = (const char*)pgm_read_word_elpm(&strings[btn_id]);
-        MODULE_CALL_THIS(gfx, stroke, gui->gfx, BLACK);
-        MODULE_CALL_THIS(gfx, textP, gui->gfx, ((display_region_t){x-3*my_strlen_P(s), 141, 0, 150}), s);
+        MODULE_CALL_THIS(gfx, fill, gui->gfx, BLACK);
+        MODULE_CALL_THIS(gfx, textP, gui->gfx, ((display_region_t){x-3*my_strlen_P(0x10000UL|(uintptr_t)s), 148, 0, 157}), 0x10000UL|(uintptr_t)s);
     }
-    wait_button_click(0);
+    wait_button_click(BTN_C);
     return 0;
 }
 
-extern fonts_fns_t fonts_fns;
-
-int8_t gui_choose_file(GUI_t *gui, FileSystem_t *fs, const char */* path */)
+int8_t gui_msgboxP(GUI_t *gui, uint32_t msgP, enum msgbox_type_t type)
 {
     (void)gui;
+    (void)msgP;
+    (void)type;
+    int len = my_strlen_P(msgP);
+    char *buf = alloca(len + 1);
+    for (int i = 0; i < len; i++)
+    {
+        buf[i] = pgm_read_byte_far(msgP + i);
+    }
+    return gui_msgbox(gui, buf, type);
+}
+
+int8_t gui_choose_file(GUI_t *gui, FileSystem_t *fs, const char */* dir */)
+{
+    (void)gui;
+    (void)fs;
     FileInfo_t info;
     fstatus_t ret;
     int8_t selection = 0;
     uint8_t num_lines = 6;
     uint8_t line_start = 0;
-    char dir[64] = "/FOLDER/";
+    char dir[64] = "/";
     file_descriptor_t dirfd = MODULE_CALL_THIS(fs, open, fs, dir, O_RDONLY | O_DIRECTORY);
     // uint32_t cluster;
     const uint8_t line_spacing = 30;
@@ -175,8 +193,8 @@ int8_t gui_choose_file(GUI_t *gui, FileSystem_t *fs, const char */* path */)
         if (selected)
         {
             // get FileInfo of selected item
-            fs->fns->seek(&fs, dirfd, 0);
-            while (selected-- && (ret = fs->fns->getdirents(&fs, dirfd, &info, 1)) == 1)
+            MODULE_CALL_THIS(fs, seek, fs, dirfd, 0);
+            while (selected-- && (ret = MODULE_CALL_THIS(fs, getdirents, fs, dirfd, &info, 1)) == 1)
             {
                 // do nothing
             }
@@ -216,7 +234,7 @@ int8_t gui_choose_file(GUI_t *gui, FileSystem_t *fs, const char */* path */)
                 goto end;
             }
         }
-        fs->fns->seek(&fs, dirfd, 0);
+        MODULE_CALL_THIS(fs, seek, fs, dirfd, 0);
         for (uint8_t ln = 0; ln < num_lines; ln++)
         {
             display_ycoord_t y = 40 + ln * line_spacing;
@@ -298,6 +316,6 @@ int8_t gui_choose_file(GUI_t *gui, FileSystem_t *fs, const char */* path */)
         }
     }
 end:
-    fs->fns->close(&fs, dirfd);
+    MODULE_CALL_THIS(fs, close, fs, dirfd);
     return 0;
 }

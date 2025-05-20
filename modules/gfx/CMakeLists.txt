@@ -13,9 +13,9 @@ target_include_directories(gfx
 target_link_modules(gfx
     PRIVATE
         module
-        fonts
 )
 target_link_libraries(gfx
     PUBLIC
         display
+        font
 )

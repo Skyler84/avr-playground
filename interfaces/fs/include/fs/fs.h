@@ -3,6 +3,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#include "module/module.h"
+
 typedef int8_t file_descriptor_t;
 typedef int16_t fstatus_t;
 
@@ -26,39 +28,27 @@ typedef struct FileInfo {
   char name[256];
 } FileInfo_t;
 
-typedef fstatus_t        (*fs_mount_fn_t)   (void *fs, bool readonly, bool mkfs);
-typedef void             (*fs_umount_fn_t)  (void *fs);
-typedef fstatus_t        (*fs_stat_fn_t)    (void *fs, const char *filename, struct FileInfo *st);
-typedef file_descriptor_t(*fs_open_fn_t)    (void *fs, const char *filename, uint8_t mode);
-typedef file_descriptor_t(*fs_openat_fn_t)  (void *fs, file_descriptor_t, const char *filename, uint8_t mode);
-typedef void             (*fs_close_fn_t)   (void *fs, file_descriptor_t fd);
-typedef fstatus_t        (*fs_seek_fn_t)    (void *fs, file_descriptor_t fd, uint32_t offset);
-typedef fstatus_t        (*fs_read_fn_t)    (void *fs, file_descriptor_t fd, uint8_t *buf, uint16_t size);
-typedef fstatus_t        (*fs_write_fn_t)   (void *fs, file_descriptor_t fd, const uint8_t *buf, uint16_t size);
-typedef fstatus_t        (*fs_unlink_fn_t)  (void *fs, const char *filename);
-typedef fstatus_t        (*fs_rename_fn_t)  (void *fs, const char *oldname, const char *newname);
-typedef void             (*fs_mkdir_fn_t)   (void *fs, const char *dirname);
-typedef void             (*fs_rmdir_fn_t)   (void *fs, const char *dirname);
-typedef fstatus_t        (*fs_getdirents_fn_t)(void *fs, file_descriptor_t fd, struct FileInfo *entry, uint16_t count);
+typedef struct FileSystem FileSystem_t;
 
-typedef struct {
-  fs_mount_fn_t mount;
-  fs_umount_fn_t umount;
-  fs_stat_fn_t stat;
-  fs_open_fn_t open;
-  fs_openat_fn_t openat;
-  fs_close_fn_t close;
-  fs_seek_fn_t seek;
-  fs_read_fn_t read;
-  fs_write_fn_t write;
-  fs_unlink_fn_t unlink;
-  fs_rename_fn_t rename;
-  fs_mkdir_fn_t mkdir;
-  fs_rmdir_fn_t rmdir;
-  fs_getdirents_fn_t getdirents;
-} FileSystem_fns_t;
-typedef FileSystem_fns_t fs_fns_t;
+#define FS_FUNCTION_INTERFACE(modname, o) \
+  o(modname, mount, fstatus_t,           FileSystem_t *fs, bool readonly, bool mkfs) \
+  o(modname, umount, void,               FileSystem_t *fs) \
+  o(modname, stat, fstatus_t,            FileSystem_t *fs, const char *filename, struct FileInfo *st) \
+  o(modname, open, file_descriptor_t,    FileSystem_t *fs, const char *filename, uint8_t mode) \
+  o(modname, openat, file_descriptor_t,  FileSystem_t *fs, file_descriptor_t, const char *filename, uint8_t mode) \
+  o(modname, close, void,                FileSystem_t *fs, file_descriptor_t fd) \
+  o(modname, seek, fstatus_t,            FileSystem_t *fs, file_descriptor_t fd, uint32_t offset) \
+  o(modname, read, fstatus_t,            FileSystem_t *fs, file_descriptor_t fd, char *buf, uint16_t size) \
+  o(modname, write, fstatus_t,           FileSystem_t *fs, file_descriptor_t fd, const char *buf, uint16_t size) \
+  o(modname, unlink, fstatus_t,          FileSystem_t *fs, const char *filename) \
+  o(modname, rename, fstatus_t,          FileSystem_t *fs, const char *oldname, const char *newname) \
+  o(modname, mkdir, void,                FileSystem_t *fs, const char *dirname) \
+  o(modname, rmdir, void,                FileSystem_t *fs, const char *dirname) \
+  o(modname, getdirents, fstatus_t,      FileSystem_t *fs, file_descriptor_t fd, struct FileInfo *entry, uint16_t count) \
 
-typedef struct {
-  FileSystem_fns_t *fns;
-} FileSystem_t;
+MODULE_DECLARE_FN_IDS(fs, FS_FUNCTION_INTERFACE)
+MODULE_DECLARE_FN_TYPES(fs, FS_FUNCTION_INTERFACE)
+MODULE_DECLARE_FNS(fs, FS_FUNCTION_INTERFACE);
+struct FileSystem {
+  fs_fns_t *fns;
+};

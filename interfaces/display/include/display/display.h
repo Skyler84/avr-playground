@@ -24,7 +24,7 @@ typedef struct display_coord{
 
 typedef struct display_region{
     display_xcoord_t x1;
-    display_xcoord_t y1;
+    display_ycoord_t y1;
     display_xcoord_t x2;
     display_ycoord_t y2;
 }display_region_t;

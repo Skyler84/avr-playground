@@ -16,5 +16,6 @@ add_link_options(-ggdb -g -O3 -Wall -Wextra -Werror)
 
 add_subdirectory(modules)
 add_subdirectory(interfaces)
+add_subdirectory(libs)
 add_subdirectory(apps)
 add_subdirectory(bootloaders)

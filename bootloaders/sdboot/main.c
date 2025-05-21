@@ -28,9 +28,8 @@
 
 void __attribute__((noreturn)) app_reboot() {
   // reboot using watchdog
-#if 0
-  WDTCSR = _BV(WDCE);
-  WDTCSR = _BV(WDE); // 16ms
+#if 1
+  wdt_enable(WDTO_250MS);
   while(1);
 #else
   // reboot using reset
@@ -319,19 +318,18 @@ static void __attribute__((noreturn)) run_interactive() {
 }
 
 int main() {
-  // check if extreset
-  if ((MCUSR & _BV(EXTRF)) == 0) {
-    app_reboot();
-  }
-
   // disable watchdog
-  MCUSR = ~_BV(WDRF); // clear watchdog reset flag
-  WDTCSR = _BV(WDCE);
-  WDTCSR = 0x00;
+  // check if extreset
+  if ((MCUSR & _BV(WDRF)) || ((MCUSR & _BV(EXTRF)) == 0)) {
+    MCUSR = ~_BV(WDRF); // clear watchdog reset flag
+    wdt_disable();
+    asm("jmp 0x0000");
+  }
+  wdt_disable();
 
   // enable boot ivsel
-  // MCUCR |= _BV(IVCE);
-  // MCUCR = _BV(IVSEL); // set bootloader vector
+  MCUCR |= _BV(IVCE);
+  MCUCR = _BV(IVSEL); // set bootloader vector
 
   // // Set clock prescaler to 1
   CLKPR = 0x80; // Enable clock change

@@ -24,22 +24,22 @@ int8_t encoder_dt_internal;
 
 void __attribute__((noinline)) encoder_irq() {
   PAUI();
-  // static uint8_t last_state = 0;
-  // uint8_t state = (ENCODER_PIN & (_BV(PHA_BIT) | _BV(PHB_BIT))) >> PHA_BIT;
+  static uint8_t last_state = 0;
+  uint8_t state = (ENCODER_PIN & (_BV(PHA_BIT) | _BV(PHB_BIT))) >> PHA_BIT;
 
-  // static const int8_t lut[16] PROGMEM = {
-  //    0,  1, -1,  0,
-  //   -1,  0,  0,  1,
-  //    1,  0,  0, -1,
-  //    0, -1,  1,  0
-  // };
-  // encoder_dt_internal += pgm_read_byte_far(pgm_get_far_address(lut) + (state | (last_state << 2)));
-  // last_state = state;
+  static const int8_t lut[16] PROGMEM = {
+     0,  1, -1,  0,
+    -1,  0,  0,  1,
+     1,  0,  0, -1,
+     0, -1,  1,  0
+  };
+  encoder_dt_internal += pgm_read_byte_far(pgm_get_far_address(lut) + (state | (last_state << 2)));
+  last_state = state;
   RESI();
 }
 
 ISR(PHA_VECTOR) {
-  // encoder_irq();
+  encoder_irq();
 }
 ISR_ALIAS(PHB_VECTOR, PHA_VECTOR);
 
@@ -58,7 +58,7 @@ void encoder_init() {
   ENCODER_PORT |= _BV(PHA_BIT) | _BV(PHB_BIT); // Enable pull-up on encoder pins
   EICRB |= _BV(ISC40) | _BV(ISC50);    // Trigger on any edge
   EICRB &= ~(_BV(ISC41) | _BV(ISC51)); // Trigger on any edge
-  // EIMSK |= _BV(INT4) | _BV(INT5); // Enable INT4 and INT5
+  EIMSK |= _BV(INT4) | _BV(INT5); // Enable INT4 and INT5
 
   sei();
   

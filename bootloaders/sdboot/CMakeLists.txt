@@ -23,9 +23,11 @@ target_link_libraries(sdboot
     PRIVATE
         ld_debug
         module
+        boot
         display
         blockdev
         font
+        # boot
         # sd
 )
 
@@ -37,7 +39,7 @@ target_compile_options(sdboot
 set_target_properties(sdboot PROPERTIES 
     BOOT_START_ADDRESS 0x1E000
     BOOT_MODULE_START_ADDRESS 0x1A000
-    APP_MODULE_START_ADDRESS 0x2000
+    APP_MODULE_START_ADDRESS 0x4000
 )
 
 

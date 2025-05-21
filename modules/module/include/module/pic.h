@@ -18,35 +18,18 @@
 #define MODULE_ADJUST_FN_PTR(ptr) \
     (void*)((uintptr_t)(ptr) + GET_MODULE_FN_PTR_OFFSET())
 
+#define GET_MODULE_FN_PTR_OFFSET() ({\
+    uintptr_t rel; \
+    asm volatile(  \
+    ASM_PUSH_PC_LABEL_ADDR(L_%=)   \
+    ASM_POP_RETURN_ADDR(0)        \
+    "      subi %A0, pm_lo8(L_%=)\n" \
+    "      sbci %B0, pm_hi8(L_%=)\n" \
+    : "=d" (rel) \
+    ::); \
+    rel; \
+})
 
-inline static
-__attribute__((pure))
-uintptr_t GET_MODULE_FN_PTR_OFFSET()
-{
-    #if 0
-    uintptr_t rel;
-    asm volatile( 
-    ASM_PUSH_PC_LABEL_ADDR(test_label)  
-    ASM_POP_RETURN_ADDR(0)       
-    // "      subi %A0, pm_lo8(test_label)\n"
-    // "      sbci %B0, pm_hi8(test_label)\n"
-    : "=r" (rel)
-    ::);
-    extern void test_label();
-    constexpr uintptr_t _test_label = &test_label;
-    return rel - _test_label;
-    #else
-    uintptr_t rel;
-    asm volatile( 
-    ASM_PUSH_PC_LABEL_ADDR(L_%=)  
-    ASM_POP_RETURN_ADDR(0)       
-    "      subi %A0, pm_lo8(L_%=)\n"
-    "      sbci %B0, pm_hi8(L_%=)\n"
-    : "=d" (rel)
-    ::);
-    return rel;
-    #endif
-}
 
 inline static uint32_t GET_MODULE_DATA_PTR_OFFSET() 
 {

@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <stdio.h>
+#include <alloca.h>
 
 #include <avr/io.h>
 #include <util/delay.h>
@@ -21,6 +22,7 @@
 #include "sd/sd.h"
 #include "fat/fat.h"
 #include "blockdev/blockdev.h"
+#include "boot/boot.h"
 
 
 
@@ -64,84 +66,35 @@ void __attribute__((noreturn)) boot_from_file(const char *filename, uint32_t loa
   app_reboot();
 }
 
-int8_t partitions_init() {
-//   sd_bd_fns.read_sector  = (bd_read_sector_fn_t )sd_fns.rdblock;
-//   sd_bd_fns.write_sector = (bd_write_sector_fn_t)sd_fns.wrblock;
-//   // initialize partitions
-//   root_bd.fns = &sd_bd_fns;
-//   root_bd.fn_ctx = NULL;
-//   root_bd.sector_start = 0;
-//   root_bd.sector_count = -1;
+int8_t partitions_init(BlockDev *root_bd, BlockDev *partition_bd) {
 
-//   partition_bd.fns = &sd_bd_fns;
-//   partition_bd.fn_ctx = NULL;
-//   partition_bd.sector_start = 0;
-//   partition_bd.sector_count = 0;
 
-//   uint8_t buf[512];
-//   blockdev_read_sector(&root_bd, 0, buf);
-//   uint16_t magic = *((uint16_t*)&buf[510]);
-//   // gui_msgboxP(&gui,PSTR("Reading MBR"), MSGBOX_OK);
-//   if (magic != 0xAA55) {
-//     // gui_msgboxP(&gui,PSTR("Error reading MBR"), MSGBOX_OK);
-//     goto err;
-//   }
-//   uint32_t start_sector = *((uint32_t*)(buf + 0x1BE + 8));
-//   uint32_t sector_count = *((uint32_t*)(buf + 0x1BE + 12));
-//   if (blockdev_partition(&root_bd, &partition_bd, start_sector, sector_count) != 0) {
-//     // error partitioning blockdev
-//     // gui_msgboxP(&gui,PSTR("Error partitioning"), MSGBOX_OK);
-//     goto err;
-//   }
-//   blockdev_read_sector(&partition_bd, 0, buf);
-//   magic = *((uint16_t*)&buf[510]);
-//   if (magic != 0xAA55) {
-//     // gui_msgboxP(&gui,PSTR("Error reading MBR"), MSGBOX_OK);
-//     goto err;
-//   }
-//   return 0;
-// err:
-//   return -1;
-  return 0;
-}
-
-void flash_page_erase_program(uint32_t page, const uint8_t *buf) {
-
-  uint16_t i;
-  uint8_t sreg;
-
-  // Disable interrupts.
-
-  sreg = SREG;
-  cli();
-
-  eeprom_busy_wait ();
-
-  boot_page_erase (page);
-  boot_spm_busy_wait ();      // Wait until the memory is erased.
-
-  for (i=0; i<SPM_PAGESIZE; i+=2)
-  {
-      // Set up little-endian word.
-
-      uint16_t w = *buf++;
-      w += (*buf++) << 8;
-
-      boot_page_fill (page + i, w);
+  uint8_t buf[512];
+  blockdev_read_sector(root_bd, 0, buf);
+  uint16_t magic = *((uint16_t*)&buf[510]);
+  // gui_msgboxP(&gui,PSTR("Reading MBR"), MSGBOX_OK);
+  if (magic != 0xAA55) {
+    // gui_msgboxP(&gui,PSTR("Error reading MBR"), MSGBOX_OK);
+    goto err;
   }
-
-  boot_page_write (page);     // Store buffer in flash page.
-  boot_spm_busy_wait();       // Wait until the memory is written.
-
-  // Reenable RWW-section again. We need this if we want to jump back
-  // to the application after bootloading.
-
-  boot_rww_enable ();
-
-  // Re-enable interrupts (if they were ever enabled).
-
-  SREG = sreg;
+  uint32_t start_sector = *((uint32_t*)(buf + 0x1BE + 8));
+  uint32_t sector_count = *((uint32_t*)(buf + 0x1BE + 12));
+  if (blockdev_partition(root_bd, partition_bd, start_sector, sector_count) != 0) {
+    // error partitioning blockdev
+    // gui_msgboxP(&gui,PSTR("Error partitioning"), MSGBOX_OK);
+    goto err;
+  }
+  blockdev_read_sector(partition_bd, 0, buf);
+  magic = *((uint16_t*)&buf[510]);
+  if (magic != 0xAA55) {
+    // gui_msgboxP(&gui,PSTR("Error reading MBR"), MSGBOX_OK);
+    goto err;
+  }
+  return 0;
+err:
+  return -1;
 }
+
 
 char hex[] = "0123456789ABCDEF";
 lcd_t lcd;
@@ -154,8 +107,6 @@ void lcd_debug_u16(lcd_xcoord_t /* x */, lcd_ycoord_t /* y */, uint16_t /* val *
 
 void __attribute__((noreturn)) sd_boot(gfx_t *gfx) {
   MODULE_CALL_THIS(gfx, nostroke, gfx);
-  MODULE_CALL_THIS(gfx, fill, gfx, RED);
-  MODULE_CALL_THIS(gfx, rectangle, gfx, ((display_region_t){0, 0, 320, 240}));
   MODULE_CALL_THIS(gfx, fill, gfx, BLACK);
   MODULE_CALL_THIS(gfx, rectangle, gfx, ((display_region_t){0, 0, 320, 240}));
   MODULE_CALL_THIS(gfx, fill, gfx, WHITE);
@@ -182,17 +133,35 @@ void __attribute__((noreturn)) sd_boot(gfx_t *gfx) {
   MODULE_CALL_THIS(gfx, textSize, gfx, 24);
   MODULE_CALL_THIS(gfx, text, gfx, ((display_region_t){0, 40, 319, 239}), "SD card detected");
 
+  blockdev_sector_fns_t sd_bd_fns;
+  sd_bd_fns.read_sector  = (bd_read_sector_fn_t )sd_fns.sd_rdblock;
+  sd_bd_fns.write_sector = (bd_write_sector_fn_t)sd_fns.sd_wrblock;
+  
+  BlockDev root_bd = {
+    .fns = &sd_bd_fns,
+    .fn_ctx = NULL,
+    .sector_start = 0,
+    .sector_count = -1,
+  };
+
+  BlockDev partition_bd = {
+    .fns = &sd_bd_fns,
+    .fn_ctx = NULL,
+    .sector_start = 0,
+    .sector_count = 0,
+  };
+
   {
     uint8_t errno;
     if ((errno = MODULE_CALL_FNS(sd, initialise, &sd_fns)) != 0) {
       static const char msg[] = "Error initializing card";
       // static const char msg[] PROGMEM = "Error initializing card";
-      char buf[32];
-      snprintf(buf, sizeof(buf), "%s %d", msg, errno);
-      gui_msgbox(&gui, buf, MSGBOX_OK);
+      // char buf[32];
+      // snprintf(buf, sizeof(buf), "%s %d", msg, errno);
+      gui_msgbox(&gui, msg, MSGBOX_OK);
       goto end;
     }
-    if (partitions_init() != 0) {
+    if (partitions_init(&root_bd, &partition_bd) != 0) {
       static const char msg[] PROGMEM = "Error initializing partitions";
       gui_msgboxP(&gui, pgm_get_far_address(msg), MSGBOX_OK);
       goto end;
@@ -202,40 +171,51 @@ void __attribute__((noreturn)) sd_boot(gfx_t *gfx) {
     fat_fns_t fat_fns;
     MODULE_IMPORT_FUNCTIONS_RUNTIME(fat, FAT_MODULE_ID, FAT_FUNCTION_EXPORTS, &fat_fns);
 
-    blockdev_sector_fns_t sd_bd_fns;
-    sd_bd_fns.read_sector  = (bd_read_sector_fn_t )sd_fns.sd_rdblock;
-    sd_bd_fns.write_sector = (bd_write_sector_fn_t)sd_fns.sd_wrblock;
-    
-    // BlockDev root_bd = {
-    //   .fns = &sd_bd_fns,
-    //   .fn_ctx = NULL,
-    //   .sector_start = 0,
-    //   .sector_count = -1,
-    // };
-
-    BlockDev partition_bd = {
-      .fns = &sd_bd_fns,
-      .fn_ctx = NULL,
-      .sector_start = 0,
-      .sector_count = 0,
-    };
-
-
     FAT_FileSystem_t fs;
     fs.fns = &fat_fns;
     MODULE_CALL_THIS(fat, init, &fs, &partition_bd);
     fstatus_t ret;
     // char hex[] = "0123456789ABCDEF";
-    ret = MODULE_CALL_THIS(fat, fat_mount, &fs, false, false);
+    ret = MODULE_CALL_THIS(fs, mount, &fs.fs, false, false);
     if (ret != 0) {
       const char msg[] = "Error mounting filesystem";
       gui_msgbox(&gui,msg, MSGBOX_OK);
       goto end;
     }
 
-    gui_choose_file(&gui, &fs.fs, "/");
+    file_descriptor_t fd = gui_choose_file(&gui, &fs.fs, "/");
     gui_msgbox(&gui,"Booting from file", MSGBOX_OK);
+    PINB = 0x80;
 
+    boot_fns_t boot_fns;
+    MODULE_IMPORT_FUNCTIONS_RUNTIME(boot, BOOT_MODULE_ID, BOOT_FUNCTION_EXPORTS, &boot_fns);
+
+    PINB = 0x80;
+
+    uint32_t page_size = MODULE_CALL_FNS(boot, get_page_size, &boot_fns);
+    uint8_t *page_buf = alloca(page_size);
+    uint32_t addr = 0;
+    while(1) {
+      ret = MODULE_CALL_THIS(fs, read, &fs.fs, fd, (char*)page_buf, page_size);
+      MODULE_CALL_FNS(boot, flash_erase, &boot_fns, addr);
+      MODULE_CALL_FNS(boot, flash_program, &boot_fns, addr, page_buf);
+      addr += page_size;
+      if (ret < (int)page_size) {
+        break;
+      }
+      if (addr > 0x8000) {
+        break;
+      }
+      // break;
+    }
+    for (int i = 0;i < 4; i++){
+      _delay_ms(200);
+      PORTB |= 0x80;
+      _delay_ms(200);
+      PORTB &= ~0x80;
+    }
+
+    app_reboot();
   }
 
   
@@ -305,15 +285,21 @@ static void __attribute__((noreturn)) run_interactive() {
   int8_t dt = 0;
   while (func == NULL) {
     wdt_reset();
-    if (button_clicked(0)) {
+    if (button_clicked(BTN_C)) {
       func = menu_func[selection];
       break;
     }
     dt = encoder_dt(0);
-    if (dt < 2 && dt > -2) {
+    int8_t sign = 0;
+    if (dt >= 2 || dt < -2) {
+      sign = dt > 0 ? 1 : -1;
+    } else if (button_clicked(BTN_N)) {
+      selection--;
+    } else if (button_clicked(BTN_S)) {
+      selection++;
+    } else {
       continue;
     }
-    int8_t sign = dt > 0 ? 1 : -1;
     encoder_dt(sign*2);
     selection += sign;
     if (selection < 0) {
@@ -344,8 +330,8 @@ int main() {
   WDTCSR = 0x00;
 
   // enable boot ivsel
-  MCUCR |= _BV(IVCE);
-  MCUCR = _BV(IVSEL); // set bootloader vector
+  // MCUCR |= _BV(IVCE);
+  // MCUCR = _BV(IVSEL); // set bootloader vector
 
   // // Set clock prescaler to 1
   CLKPR = 0x80; // Enable clock change

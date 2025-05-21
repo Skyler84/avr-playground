@@ -38,17 +38,11 @@
 #define SPI_PIN PINB
 
 
-static uint8_t spi_tx_rx_byte(uint8_t byte) {
-
-  // load data into register
-  SPDR = byte;
-
-  // Wait for transmission complete
-  while(!(SPSR & (1 << SPIF)));
-
-  // return SPDR
-  return SPDR;
-}
+#define spi_tx_rx_byte(byte) ({\
+  SPDR = (uint8_t)byte;\
+  while(!(SPSR & (1 << SPIF)));\
+  SPDR;\
+})
 
 static 
 __attribute__((noinline))

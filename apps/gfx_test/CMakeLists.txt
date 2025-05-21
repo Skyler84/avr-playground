@@ -17,7 +17,7 @@ target_link_libraries(gfx_test
     module
     display
     lcd
-    fonts
+    font5x7
     gfx
 )
 

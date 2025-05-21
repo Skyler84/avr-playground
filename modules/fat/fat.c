@@ -176,6 +176,7 @@ static fstatus_t fat_navigate_directory(FAT_FileSystem_t *fs, file_descriptor_t 
         } else {
           fs->handles[fd].handle_type = 1; // file
         }
+        fs->handles[fd].size = dir_entry.size;
         break;
       }
     }
@@ -267,22 +268,70 @@ file_descriptor_t fat_open(FileSystem_t *fs, const char *filename, uint8_t mode)
   (void)fs;
   (void)filename;
   (void)mode;
-
-  return 0; 
+  
+  // we don't support relative paths. 
+  // relative paths are handled by the VFS layer
+  // we only support absolute paths 
+  if (filename[0] != '/') {
+    return -1; // invalid path
+  }
+  return fat_openat(fs, -1, filename, mode);
 }
-file_descriptor_t fat_openat(FileSystem_t *fs, file_descriptor_t dir, const char *filename, uint8_t mode) 
+file_descriptor_t fat_openat(FileSystem_t *_fs, file_descriptor_t dir, const char *filename, uint8_t mode) 
 { 
+  FAT_FileSystem_t *fs = (FAT_FileSystem_t*)_fs;
   (void)fs;
   (void)dir;
   (void)filename;
   (void)mode;
   
-  return 0; 
+  uint32_t dir_cluster;
+
+  // first check if we have available handles
+  file_descriptor_t i = fat_get_handle(fs);
+  if (i == (file_descriptor_t)-1) {
+    return i; // no available handles
+  }
+  FAT_Handle_t *handle = &fs->handles[i];
+
+  if (*filename == '/') {
+    // absolute path
+    dir_cluster = 0;
+    filename++;
+    handle->handle_type = 2; // directory
+    handle->size = -1;
+  } else {
+    if (fs->handles[dir].handle_type != 2) {
+      return -1; // not a directory
+    }
+    dir_cluster = fs->handles[dir].cluster_chain.start_cluster;
+    handle->handle_type = fs->handles[dir].handle_type; // file
+    fs->handles[i].size = fs->handles[dir].size; 
+  }
+
+  
+  
+  fs->handles[i].sector_offset = 0; // start at beginning of directory
+  // get root dir clusterchain
+  fat_cluster_chain_init(fs, &fs->handles[i].cluster_chain, dir_cluster);
+  if (indirect_call(fat_navigate_directory)(fs, i, (char*)filename) != 0) {
+    goto err;
+  }
+  if (fs->handles[i].handle_type == 2 && (mode & O_DIRECTORY) == 0) {
+    goto err;
+  }
+  if (fs->handles[i].handle_type == 1 && (mode & O_DIRECTORY) != 0) {
+    goto err;
+  }
+  return i;
+err:
+  fs->handles[i].handle_type = 0; // invalid handle
+  return -2; // error
 }
 void fat_close(FileSystem_t *_fs, file_descriptor_t fd) 
 {
   FAT_FileSystem_t *fs = (FAT_FileSystem_t*)_fs;
-  if (fs->handles[fd].handle_type != 1) {
+  if (fs->handles[fd].handle_type == 0) {
     return; // already closed
   }
   fs->handles[fd].handle_type = 0;
@@ -290,13 +339,22 @@ void fat_close(FileSystem_t *_fs, file_descriptor_t fd)
   fs->handles[fd].size = 0;
   fat_flush_sector(fs, fs->handles[fd].cluster_chain.cluster.sector_start);
 }
-fstatus_t fat_seek(FileSystem_t *fs, file_descriptor_t fd, uint32_t offset) 
+fstatus_t fat_seek(FileSystem_t *_fs, file_descriptor_t fd, uint32_t offset, int whence) 
 { 
+  FAT_FileSystem_t *fs = (FAT_FileSystem_t*)_fs;
   (void)fs;
   (void)fd;
   (void)offset;
 
-  return 0; 
+  if (whence == SEEK_SET && offset == 0) {
+    
+    fat_cluster_chain_init(fs, &fs->handles[fd].cluster_chain, fs->handles[fd].cluster_chain.start_cluster);
+    fs->handles[fd].sector_offset = 0;
+    fs->handles[fd].sector_offset = 0;
+    return 0;
+  }
+
+  return -1; 
 }
 fstatus_t fat_read(FileSystem_t *_fs, file_descriptor_t fd, char *_buf, uint16_t size) 
 { 
@@ -307,10 +365,16 @@ fstatus_t fat_read(FileSystem_t *_fs, file_descriptor_t fd, char *_buf, uint16_t
   char *buf = _buf;
   FAT_SectorCache_t *cache;
   uint32_t offset;
+  uint32_t remaining;
+  if (fs->handles[fd].file.current_offset >= fs->handles[fd].size) {
+    return 0; // end of file
+  }
+  remaining = fs->handles[fd].size - fs->handles[fd].file.current_offset;
+  size = size > remaining ? remaining : size;
   do{
     cache = fat_cache_sector(fs, fs->handles[fd].cluster_chain.cluster.sector_start);
     offset = fs->handles[fd].sector_offset;
-    for (; offset < 512 && size; size--, buf++, offset++) {
+    for (; offset < 512 && size; size--, buf++, offset++, fs->handles[fd].file.current_offset++) {
       *buf = cache->sector_data[offset];
     }
     if (offset == 512) {
@@ -496,6 +560,97 @@ fstatus_t fat_readdir(FAT_FileSystem_t *fs, file_descriptor_t fd, struct FileInf
 
 
   return -9; // not implemented
+}
+
+fstatus_t fat_getdirents(FileSystem_t *_fs, file_descriptor_t fd, struct FileInfo *entry, uint16_t count) 
+{ 
+  FAT_FileSystem_t *fs = (FAT_FileSystem_t*)_fs;
+  (void)fs;
+  (void)fd;
+  (void)entry;
+  (void)count;
+  if (fs->handles[fd].handle_type != 2) {
+    return -1; // not a directory
+  }
+  
+  if (fs->handles[fd].handle_type != 2) {
+    return -1; // not a directory
+  }
+
+  if (entry == NULL) {
+    // reset directory to beginning
+    fat_cluster_chain_init(fs, &fs->handles[fd].cluster_chain, fs->handles[fd].cluster_chain.start_cluster);
+    fs->handles[fd].sector_offset = 0;
+    return 0;
+  }
+
+  FAT_DirectoryEntry_t dir_entry;
+  for(int i = 0; i < 32; i++) {
+    ((uint8_t*)&dir_entry)[i] = 0;
+  }
+  const char *si;
+  char *di;
+  uint16_t i = 0;
+  uint8_t failsafe = 255;
+  while(i < count && failsafe--) {
+    fstatus_t ret = 32;
+    fs->handles[fd].handle_type = 1;
+    ret = indirect_call(fat_read)(&fs->fs, fd, (char*)&dir_entry, sizeof(FAT_DirectoryEntry_t));
+    fs->handles[fd].handle_type = 2;
+    if (ret < (long)sizeof(FAT_DirectoryEntry_t)) {  
+      return i; // error reading directory
+    }
+    if ((uint8_t)dir_entry.filename[0] == (uint8_t)0x00) {
+      continue;
+    }
+    if ((uint8_t)dir_entry.filename[0] == (uint8_t)0xE5) {
+      continue; // deleted file
+    }
+    if (dir_entry.attr & ~0x30) {
+      // return -4;
+      continue; // not file or dir
+    }
+    if (dir_entry.attr & 0x10) {
+      i++;
+      // failsafe=255;
+      entry->type = 2; // directory
+      si = dir_entry.filename;
+      di = entry->name;
+      for (int i = 0; i < 8; i++) {
+        if (*si == ' ') {
+          break;
+        }
+        *di++ = *si++;
+      }
+    } else {
+      i++;
+      // failsafe=255;
+      entry->type = 1; // file
+      si = dir_entry.filename;
+      di = entry->name;
+      for (int i = 0; i < 8; i++) {
+        if (*si == ' ') {
+          break;
+        }
+        *di++ = *si++;
+      }
+      *di++ = '.';
+      si = dir_entry.ext;
+      for (int i = 0; i < 3; i++) {
+        if (*si == ' ') {
+          break;
+        }
+        *di++ = *si++;
+      }
+    }
+    *di = '\0';
+    entry->size = dir_entry.file_size;
+    entry->inode = (uint32_t)dir_entry.high_word_of_cluster << 16 | dir_entry.low_word_of_cluster;
+    entry++;
+  }
+
+
+  return i; 
 }
 
 REGISTER_MODULE(fat, FAT_MODULE_ID, FAT_FUNCTION_EXPORTS, FAT_API_VER);

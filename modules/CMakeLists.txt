@@ -28,7 +28,7 @@ function(target_link_modules target)
             message(STATUS "${link_modules}")
             set_property(TARGET ${TARGET} APPEND PROPERTY LINK_MODULES "mod_${module}")
             get_target_property(mod_bin mod_${module} BINFILE)
-            add_dependencies(${TARGET} mod_${module} )
+            add_dependencies(${TARGET} mod_${module})
             set_property(TARGET ${TARGET} APPEND PROPERTY LINK_MODULES_BINS "${mod_bin}")
         else()
             message (FATAL_ERROR "Module ${module} not found")
@@ -59,19 +59,23 @@ function(add_module name)
         PUBLIC
             # ${name}_MODTYPE=MODULE
     )
+
     add_custom_command(
         TARGET mod_${name}
         POST_BUILD
-        BYPRODUCTS mod_${name}.bin
-        # OUTPUT mod_${name}.elf mod_${name}.bin
-        # DEPENDS mod_${name} ${CMAKE_SOURCE_DIR}/modules/check_module.sh
-        COMMAND ${CMAKE_SOURCE_DIR}/modules/check_module.sh mod_${name}
         COMMAND avr-size mod_${name}
-        COMMAND cp mod_${name} mod_${name}.elf
-        COMMAND avr-objcopy -O binary mod_${name} mod_${name}.bin
-        COMMAND_EXPAND_LISTS
-        VERBATIM
     )
+
+    add_custom_target(mod_${name}.hex ALL
+        DEPENDS mod_${name}
+        COMMAND avr-objcopy -O ihex mod_${name} mod_${name}.hex
+    )
+
+    add_custom_target(mod_${name}.bin ALL
+        DEPENDS mod_${name}
+        COMMAND avr-objcopy -O binary mod_${name} mod_${name}.bin
+    )
+
     set_target_properties(mod_${name} PROPERTIES
         BINFILE "${CMAKE_CURRENT_BINARY_DIR}/mod_${name}.bin"
     )
@@ -123,8 +127,26 @@ function(add_module name)
     #         "$<TARGET_PROPERTY:${name},LINK_LIBRARIES>"
     # )
     if (NOT ${name} STREQUAL "module")
-        target_link_libraries(${name} INTERFACE mod_interface_module)
+        target_link_libraries(${name} PRIVATE mod_interface_module)
     endif()
+
+    set_target_properties(
+        ${name} 
+        mod_${name} 
+        mod_interface_${name}
+        mod_${name}.bin
+        mod_${name}.hex
+        PROPERTIES
+        FOLDER "Modules/${name}"
+    )
+
+    install(
+        FILES 
+        ${CMAKE_CURRENT_BINARY_DIR}/mod_${name}.hex
+        ${CMAKE_CURRENT_BINARY_DIR}/mod_${name}.bin
+        DESTINATION ${CMAKE_INSTALL_PREFIX}/modules/${name}
+    )
+
 endfunction()
 
 add_subdirectory(module)
@@ -133,3 +155,4 @@ add_subdirectory(lcd)
 add_subdirectory(sd)
 add_subdirectory(fat)
 add_subdirectory(gfx)
+add_subdirectory(boot)

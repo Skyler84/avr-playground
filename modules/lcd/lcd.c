@@ -54,9 +54,9 @@ static void NOINLINE write_data(uint8_t data) {
 
 #endif
 
-inline static void write_data16(uint16_t data) {
-  write_data((data) >> 8);
-  write_data((data) & 0xFF);
+#define write_data16(data) {\
+  write_data((data) >> 8);\
+  write_data((data) & 0xFF);\
 }
 
 // static void NOINLINE write_cmd_data(uint8_t cmd, uint8_t ndata, char *data) {

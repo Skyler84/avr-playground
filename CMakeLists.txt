@@ -10,9 +10,10 @@ if(NOT "${BOARD}" STREQUAL "")
     include(boards/${BOARD}.cmake)
 endif()
 
-add_compile_options(-ggdb -g -O3 -Wall -Wextra -Werror)
-add_link_options(-ggdb -g -O3 -Wall -Wextra -Werror)
+add_compile_options(-ggdb -g -Os -Wall -Wextra -Werror -fstack-usage)
+add_link_options(-ggdb -g -Os -Wall -Wextra -Werror -mrelax)
 
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 add_subdirectory(modules)
 add_subdirectory(interfaces)

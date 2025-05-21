@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <stdio.h>
 
 #include "module/module.h"
 
@@ -37,7 +38,7 @@ typedef struct FileSystem FileSystem_t;
   o(modname, open, file_descriptor_t,    FileSystem_t *fs, const char *filename, uint8_t mode) \
   o(modname, openat, file_descriptor_t,  FileSystem_t *fs, file_descriptor_t, const char *filename, uint8_t mode) \
   o(modname, close, void,                FileSystem_t *fs, file_descriptor_t fd) \
-  o(modname, seek, fstatus_t,            FileSystem_t *fs, file_descriptor_t fd, uint32_t offset) \
+  o(modname, seek, fstatus_t,            FileSystem_t *fs, file_descriptor_t fd, uint32_t offset, int whence) \
   o(modname, read, fstatus_t,            FileSystem_t *fs, file_descriptor_t fd, char *buf, uint16_t size) \
   o(modname, write, fstatus_t,           FileSystem_t *fs, file_descriptor_t fd, const char *buf, uint16_t size) \
   o(modname, unlink, fstatus_t,          FileSystem_t *fs, const char *filename) \

@@ -147,5 +147,5 @@ struct FAT_FileSystem {
   uint32_t sectors_per_cluster;
   uint32_t root_entries;
   uint32_t root_cluster;
-  FAT_Handle_t handles[4];
+  FAT_Handle_t handles[8];
 };

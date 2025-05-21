@@ -359,17 +359,17 @@ fstatus_t fat_seek(FileSystem_t *_fs, file_descriptor_t fd, uint32_t offset, int
 fstatus_t fat_read(FileSystem_t *_fs, file_descriptor_t fd, char *_buf, uint16_t size) 
 { 
   FAT_FileSystem_t *fs = (FAT_FileSystem_t*)_fs;
-  if (fs->handles[fd].handle_type != 1) {
-    return -1; // not a file
-  }
   char *buf = _buf;
   FAT_SectorCache_t *cache;
   uint32_t offset;
-  uint32_t remaining;
-  if (fs->handles[fd].file.current_offset >= fs->handles[fd].size) {
+  uint32_t remaining = -1;
+  if (fs->handles[fd].cluster_chain.cluster.current_cluster & 0x0ffffff8 == 0x0ffffff8) {
     return 0; // end of file
   }
-  remaining = fs->handles[fd].size - fs->handles[fd].file.current_offset;
+  // if (fs->handles[fd].file.current_offset >= fs->handles[fd].size) {
+  //   return 0; // end of file
+  // }
+  // remaining = fs->handles[fd].size - fs->handles[fd].file.current_offset;
   size = size > remaining ? remaining : size;
   do{
     cache = fat_cache_sector(fs, fs->handles[fd].cluster_chain.cluster.sector_start);
@@ -379,7 +379,6 @@ fstatus_t fat_read(FileSystem_t *_fs, file_descriptor_t fd, char *_buf, uint16_t
     }
     if (offset == 512) {
       fs->handles[fd].sector_offset = 0;
-      // offset = 0;
       fs->handles[fd].cluster_chain.cluster.sector_start++;
       fs->handles[fd].cluster_chain.cluster.sector_count--;
       if ( fs->handles[fd].cluster_chain.cluster.sector_count == 0) {
@@ -460,7 +459,7 @@ file_descriptor_t fat_opendirat(FAT_FileSystem_t *fs, file_descriptor_t dir, con
   
   fs->handles[i].handle_type = 2; // directory
   fs->handles[i].sector_offset = 0; // start at beginning of directory
-  fs->handles[i].size = 0; // size is unknown
+  fs->handles[i].size = -1; // size is unknown
   // get root dir clusterchain
   fat_cluster_chain_init(fs, &fs->handles[i].cluster_chain, dir_cluster);
   if (indirect_call(fat_navigate_directory)(fs, i, (char*)dirname) != 0) {
@@ -554,6 +553,9 @@ fstatus_t fat_readdir(FAT_FileSystem_t *fs, file_descriptor_t fd, struct FileInf
     }
     *di = '\0';
     entry->size = dir_entry.file_size;
+    if (dir_entry.attr & 0x10) {
+      entry->size = -1;
+    }
     entry->inode = (uint32_t)dir_entry.high_word_of_cluster << 16 | dir_entry.low_word_of_cluster;
     return 0;
   }
@@ -562,8 +564,11 @@ fstatus_t fat_readdir(FAT_FileSystem_t *fs, file_descriptor_t fd, struct FileInf
   return -9; // not implemented
 }
 
+#include <avr/io.h>
+
 fstatus_t fat_getdirents(FileSystem_t *_fs, file_descriptor_t fd, struct FileInfo *entry, uint16_t count) 
 { 
+  PORTB &= ~0x80;
   FAT_FileSystem_t *fs = (FAT_FileSystem_t*)_fs;
   (void)fs;
   (void)fd;
@@ -591,9 +596,16 @@ fstatus_t fat_getdirents(FileSystem_t *_fs, file_descriptor_t fd, struct FileInf
   const char *si;
   char *di;
   uint16_t i = 0;
-  uint8_t failsafe = 255;
+  uint8_t failsafe = 32;
   while(i < count && failsafe--) {
     fstatus_t ret = 32;
+    ret = indirect_call(fat_readdir)(fs, fd, entry);
+    if (ret < 0) {
+      return i;
+    }
+    i++;
+    entry++;
+    continue;
     fs->handles[fd].handle_type = 1;
     ret = indirect_call(fat_read)(&fs->fs, fd, (char*)&dir_entry, sizeof(FAT_DirectoryEntry_t));
     fs->handles[fd].handle_type = 2;

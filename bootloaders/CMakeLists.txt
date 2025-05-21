@@ -39,9 +39,14 @@ function(make_avr_bootloader target)
         DEPENDS ${app}
         COMMAND avr-objcopy -O binary ${app} ${app}.bin
     )
+
+    get_target_property(mod_bins ${target} LINK_MODULES_TARGETS)
+    if ("${mod_bins}" STREQUAL "mod_bins-NOTFOUND")
+        set(mod_bins "")
+    endif()
     
     add_custom_target(${app}.mods.bin ALL
-        DEPENDS $<TARGET_PROPERTY:${target},LINK_MODULES_BINS>
+        DEPENDS ${mod_bins}
         COMMAND cat "$<TARGET_PROPERTY:${target},LINK_MODULES_BINS>" > ${app}.mods.bin
         COMMAND_EXPAND_LISTS
     )
@@ -81,10 +86,10 @@ function(make_avr_bootloader target)
     
     install(
         FILES 
-        ${CMAKE_CURRENT_BINARY_DIR}/${app}
-        ${CMAKE_CURRENT_BINARY_DIR}/${app}.hex
+        # ${CMAKE_CURRENT_BINARY_DIR}/${app}
+        # ${CMAKE_CURRENT_BINARY_DIR}/${app}.hex
         ${CMAKE_CURRENT_BINARY_DIR}/${app}.bin
-        ${CMAKE_CURRENT_BINARY_DIR}/${app}.all.hex
+        # ${CMAKE_CURRENT_BINARY_DIR}/${app}.all.hex
         ${CMAKE_CURRENT_BINARY_DIR}/${app}.all.bin
         DESTINATION ${CMAKE_INSTALL_PREFIX}/bootloaders/${target}
     )

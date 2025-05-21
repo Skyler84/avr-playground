@@ -32,8 +32,13 @@ function(make_avr_app target)
         COMMAND avr-objcopy -O binary ${app} ${app}.bin
     )
 
+    get_target_property(mod_bins ${target} LINK_MODULES_TARGETS)
+    if ("${mod_bins}" STREQUAL "mod_bins-NOTFOUND")
+        set(mod_bins "")
+    endif()
+
     add_custom_target(${app}.mods.bin ALL
-        DEPENDS $<TARGET_PROPERTY:${target},LINK_MODULES_BINS>
+        DEPENDS ${mod_bins}
         COMMAND cat "$<TARGET_PROPERTY:${target},LINK_MODULES_BINS>" > ${app}.mods.bin
         COMMAND_EXPAND_LISTS
     )
@@ -73,10 +78,10 @@ function(make_avr_app target)
 
     install(
         FILES 
-        ${CMAKE_CURRENT_BINARY_DIR}/${app}
-        ${CMAKE_CURRENT_BINARY_DIR}/${app}.hex
+        # ${CMAKE_CURRENT_BINARY_DIR}/${app}
+        # ${CMAKE_CURRENT_BINARY_DIR}/${app}.hex
         ${CMAKE_CURRENT_BINARY_DIR}/${app}.bin
-        ${CMAKE_CURRENT_BINARY_DIR}/${app}.all.hex
+        # ${CMAKE_CURRENT_BINARY_DIR}/${app}.all.hex
         ${CMAKE_CURRENT_BINARY_DIR}/${app}.all.bin
         DESTINATION ${CMAKE_INSTALL_PREFIX}/apps/${target}
     )
@@ -105,3 +110,4 @@ add_subdirectory(audio_test)
 add_subdirectory(encoder_test)
 add_subdirectory(lcd_test)
 add_subdirectory(gfx_test)
+add_subdirectory(fat_test)

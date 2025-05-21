@@ -28,8 +28,10 @@ function(target_link_modules target)
             message(STATUS "${link_modules}")
             set_property(TARGET ${TARGET} APPEND PROPERTY LINK_MODULES "mod_${module}")
             get_target_property(mod_bin mod_${module} BINFILE)
-            add_dependencies(${TARGET} mod_${module})
+            get_target_property(target_bin mod_${module} BINTARGETS)
+            add_dependencies(${TARGET} mod_${module} mod_${module}.bin)
             set_property(TARGET ${TARGET} APPEND PROPERTY LINK_MODULES_BINS "${mod_bin}")
+            set_property(TARGET ${TARGET} APPEND PROPERTY LINK_MODULES_TARGETS "${target_bin}")
         else()
             message (FATAL_ERROR "Module ${module} not found")
         endif()
@@ -78,6 +80,7 @@ function(add_module name)
 
     set_target_properties(mod_${name} PROPERTIES
         BINFILE "${CMAKE_CURRENT_BINARY_DIR}/mod_${name}.bin"
+        BINTARGETS "mod_${name}.bin"
     )
     add_library(mod_interface_${name} INTERFACE)
     target_compile_definitions(mod_interface_${name}
@@ -142,7 +145,7 @@ function(add_module name)
 
     install(
         FILES 
-        ${CMAKE_CURRENT_BINARY_DIR}/mod_${name}.hex
+        # ${CMAKE_CURRENT_BINARY_DIR}/mod_${name}.hex
         ${CMAKE_CURRENT_BINARY_DIR}/mod_${name}.bin
         DESTINATION ${CMAKE_INSTALL_PREFIX}/modules/${name}
     )

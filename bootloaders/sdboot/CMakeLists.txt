@@ -21,7 +21,7 @@ target_link_modules(sdboot
 )
 target_link_libraries(sdboot
     PRIVATE
-        ld_debug
+        # ld_debug
         module
         boot
         display

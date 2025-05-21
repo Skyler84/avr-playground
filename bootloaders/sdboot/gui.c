@@ -167,6 +167,18 @@ int8_t gui_msgboxP(GUI_t *gui, uint32_t msgP, enum msgbox_type_t type)
     return gui_msgbox(gui, buf, type);
 }
 
+#include "fat/fat.h"
+
+static void u32_to_hex(uint32_t val, char *buf)
+{
+    const char hex[] = "0123456789ABCDEF";
+    for (int i = 0; i < 8; i++)
+    {
+        buf[i] = hex[(val >> (28 - i * 4)) & 0x0F];
+    }
+    buf[8] = '\0';
+}
+
 file_descriptor_t gui_choose_file(GUI_t *gui, FileSystem_t *fs, const char */* dir */)
 {
     (void)gui;
@@ -176,19 +188,18 @@ file_descriptor_t gui_choose_file(GUI_t *gui, FileSystem_t *fs, const char */* d
     int8_t selection = 0;
     uint8_t num_lines = 6;
     uint8_t line_start = 0;
-    char dir[64] = "/LAFORT~1/APPS";
-    // char dir[64] = "/LAFORT~1";
-    file_descriptor_t dirfd = MODULE_CALL_THIS(fs, open, fs, dir, O_RDONLY | O_DIRECTORY);
+    // char dir[64] = "/LAFORT~1/APPS";
+    char dir[64] = "/LAFORT~1";
+    // char dir[64] = "/";
+    file_descriptor_t dirfd;
+    dirfd = MODULE_CALL_THIS(fs, open, fs, dir, O_RDONLY | O_DIRECTORY);
     // uint32_t cluster;
     const uint8_t line_spacing = 30;
     uint8_t selected = 0;
     PINB = 0x80;
     while (1)
     {
-        MODULE_CALL_THIS(gfx, fill, gui->gfx, BLACK);
-        MODULE_CALL_THIS(gfx, nostroke, gui->gfx);
-        MODULE_CALL_THIS(gfx, rectangle, gui->gfx, (display_region_t){0, 0, 320, 20});
-
+        uint8_t x = 0;
         int8_t line_no = 0;
         uint16_t colors[] = {0x045c, 0x12d1};
         if (selected)
@@ -199,7 +210,7 @@ file_descriptor_t gui_choose_file(GUI_t *gui, FileSystem_t *fs, const char */* d
             {
                 // do nothing
             }
-            if (ret < 0)
+            if (ret != 1)
             {
                 static const char msg[] = "Error reading directory";
                 uint_farptr_t msgP = pgm_get_far_address(msg);
@@ -223,9 +234,12 @@ file_descriptor_t gui_choose_file(GUI_t *gui, FileSystem_t *fs, const char */* d
             {
                 // directory
                 file_descriptor_t newdirfd = MODULE_CALL_THIS(fs, openat, fs, dirfd, info.name, O_RDONLY  | O_DIRECTORY);
-                if (newdirfd < 0)
+                if (newdirfd < 0 || newdirfd == dirfd)
                 {
-                    gui_msgbox(gui,"Error opening directory", MSGBOX_OK);
+                    char msg[] = "Error opening directory";
+                    char buf[32]; 
+                    u32_to_hex(newdirfd, buf);
+                    gui_msgbox(gui, buf, MSGBOX_OK);
                     goto end;
                 }
                 MODULE_CALL_THIS(fs, close, fs, dirfd);
@@ -244,9 +258,48 @@ file_descriptor_t gui_choose_file(GUI_t *gui, FileSystem_t *fs, const char */* d
                 goto end;
             }
         }
+        char hex[] = "0123456789ABCDEF";
+        char buf[32];
+        {
+            MODULE_CALL_THIS(gfx, fill, gui->gfx, BLACK);
+            MODULE_CALL_THIS(gfx, nostroke, gui->gfx);
+            MODULE_CALL_THIS(gfx, rectangle, gui->gfx, (display_region_t){0, 0, 320, 50});
+            MODULE_CALL_THIS(gfx, fill, gui->gfx, WHITE);
+            MODULE_CALL_THIS(gfx, textSize, gui->gfx, 12);
+            {
+                FAT_FileSystem_t *fatfs = (FAT_FileSystem_t*)fs;
+                // uint32_t val = dirfd;
+                uint32_t val = fatfs->handles[dirfd].cluster_chain.cluster.current_cluster;
+                uint8_t i = 0;
+                buf[i++] = 'i';
+                buf[i++] = 'n';
+                buf[i++] = 'o';
+                buf[i++] = ':';
+                u32_to_hex(val, &buf[i]);
+                i += 8;
+                buf[i++] = '\0';
+            }
+            MODULE_CALL_THIS(gfx, text, gui->gfx, ((display_region_t){0, 8, 0, 0}), buf);
+            MODULE_CALL_THIS(gfx, textSize, gui->gfx, 24);
+        }
+        for (uint8_t ln = 0; ln < num_lines; ln++) {
+            display_ycoord_t y = 40 + ln * line_spacing;
+            display_ycoord_t ys = y - (line_spacing - 16) / 2;
+            display_ycoord_t ye = y + (line_spacing + 1 + 16) / 2;
+            MODULE_CALL_THIS(gfx, fill, gui->gfx, colors[ln % 2]);
+            MODULE_CALL_THIS(gfx, rectangle, gui->gfx, (display_region_t){10, ys, 309, ye});
+            y += 15;
+        }
         MODULE_CALL_THIS(fs, seek, fs, dirfd, 0, SEEK_SET);
+        MODULE_CALL_THIS(gfx, fill, gui->gfx, WHITE);
+        MODULE_CALL_THIS(fs, getdirents, fs, dirfd, NULL, 0);
         while ((ret = MODULE_CALL_THIS(fs, getdirents, fs, dirfd, &info, 1)) == 1)
         {
+            char buf[2];
+            buf[0] = hex[x&0x0f];
+            buf[1] = '\0';
+            MODULE_CALL_THIS(gfx, text, gui->gfx, ((display_region_t){x*12, 30, 0, 0}), buf);
+            x+=1;
             if (line_no < line_start)
             {
                 line_no++;
@@ -259,12 +312,7 @@ file_descriptor_t gui_choose_file(GUI_t *gui, FileSystem_t *fs, const char */* d
             }
             uint8_t ln = line_no - line_start;
             display_ycoord_t y = 40 + ln * line_spacing;
-            display_ycoord_t ys = y - (line_spacing - 16) / 2;
-            display_ycoord_t ye = y + (line_spacing + 1 + 16) / 2;
-            MODULE_CALL_THIS(gfx, fill, gui->gfx, colors[ln % 2]);
-            MODULE_CALL_THIS(gfx, rectangle, gui->gfx, (display_region_t){10, ys, 309, ye});
             y += 15;
-            MODULE_CALL_THIS(gfx, fill, gui->gfx, WHITE);
             MODULE_CALL_THIS(gfx, text, gui->gfx, ((display_region_t){40, y, 0, y}), info.name);
             if (line_no == selection)
             {
@@ -273,6 +321,12 @@ file_descriptor_t gui_choose_file(GUI_t *gui, FileSystem_t *fs, const char */* d
             line_no++;
         }
         PINB = 0x80;
+        
+        // char buf[2];
+        buf[0] = 'A';
+        buf[1] = '\0';
+        MODULE_CALL_THIS(gfx, text, gui->gfx, ((display_region_t){x*12, 30, 0, 0}), buf);
+        x+=1;
         while (1)
         {
             _delay_ms(10);

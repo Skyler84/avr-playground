@@ -1,8 +1,8 @@
 add_executable(fortuna-tetris)
 target_sources(fortuna-tetris
     PRIVATE
-        FortunaTetris/switches
-        FortunaTetris/tetris
+        FortunaTetris/switches.c
+        FortunaTetris/tetris.c
         FortunaTetris/tetromino.c
         FortunaTetris/lcd/lcd.c
 )

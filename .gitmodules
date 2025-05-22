@@ -10,3 +10,6 @@
 [submodule "apps/comp2215/1415/lafortuna_snake/La-Fortuna-Snake"]
 	path = apps/comp2215/1415/lafortuna_snake/La-Fortuna-Snake
 	url = https://github.com/Southampton-ECS-COMP2215-Archive/La-Fortuna-Snake
+[submodule "apps/comp2215/1415/TronFortuna/TronFortuna"]
+	path = apps/comp2215/1415/TronFortuna/TronFortuna
+	url = https://github.com/Southampton-ECS-COMP2215-Archive/TronFortuna

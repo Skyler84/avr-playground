@@ -1,4 +1,5 @@
 #include <avr/io.h>
+#include <util/delay.h>
 
 #include <string.h>
 
@@ -124,13 +125,24 @@ int main() {
     MODULE_CALL_THIS(gfx, text, &gfx, ((display_region_t){0, 80, 319, 239}), "Filesystem mounted");
   }
   MODULE_CALL_THIS(gfx, text, &gfx, ((display_region_t){0, 100, 319, 239}), "Reading root directory");
-  const char dir[] = "/LAFORT~1";
-  file_descriptor_t dirfd = MODULE_CALL_THIS(fs, open, &fs.fs, dir, O_RDONLY | O_DIRECTORY);
-  if (dirfd < 0) {
-    MODULE_CALL_THIS(gfx, text, &gfx, ((display_region_t){0, 120, 319, 239}), "Error opening root directory");
-    while(1);
-  } else {
-    MODULE_CALL_THIS(gfx, text, &gfx, ((display_region_t){0, 120, 319, 239}), "Root directory opened");
+  const char *path[] = {
+    "LAFORT~1",
+    "APPS",
+    "BLINKY"
+  };
+  file_descriptor_t dirfd = MODULE_CALL_THIS(fs, open, &fs.fs, "/", O_RDONLY | O_DIRECTORY);
+  for (uint8_t i = 0; i < 3; i++) {
+    const char *dirname = path[i];
+    file_descriptor_t fd = MODULE_CALL_THIS(fs, openat, &fs.fs, dirfd, dirname, O_RDONLY | O_DIRECTORY);
+
+    if (fd < 0) {
+      MODULE_CALL_THIS(gfx, text, &gfx, ((display_region_t){0, 120, 319, 239}), "Error opening directory");
+      while(1);
+    } else {
+      MODULE_CALL_THIS(gfx, text, &gfx, ((display_region_t){0, 120, 319, 239}), "directory opened");
+    }
+    MODULE_CALL_THIS(fs, close, &fs.fs, dirfd);
+    dirfd = fd;
   }
   MODULE_CALL_THIS(gfx, fill, &gfx, BLACK);
   MODULE_CALL_THIS(gfx, nostroke, &gfx);
@@ -147,19 +159,28 @@ int main() {
       MODULE_CALL_THIS(gfx, text, &gfx, ((display_region_t){col * 20, rows * 10 + 40, 319, 239}), cbuf);
     }
   }
-  // MODULE_CALL_THIS(gfx, text, &gfx, ((display_region_t){0, 20, 319, 239}), "Reading directory");
-  // FileInfo_t info;
-  // fstatus_t ret;
-  // int i = 0;
-  // while((ret = MODULE_CALL_THIS(fat, readdir, &fs, dirfd, &info)) == 0) {
-  //   char buf[32];
-  //   snprintf(buf, sizeof(buf), "%s", info.name);
-  //   MODULE_CALL_THIS(gfx, text, &gfx, ((display_region_t){0, 40 + i * 20, 319, 239}), buf);
-  //   i++;
-  //   if (i > 10) {
-  //     break;
-  //   }
-  // }
+
+  _delay_ms(2000);
+
+  MODULE_CALL_THIS(gfx, fill, &gfx, BLACK);
+  MODULE_CALL_THIS(gfx, nostroke, &gfx);
+  MODULE_CALL_THIS(gfx, rectangle, &gfx, (display_region_t){0, 0, 320, 240});
+  MODULE_CALL_THIS(gfx, fill, &gfx, WHITE);
+
+  MODULE_CALL_THIS(gfx, text, &gfx, ((display_region_t){0, 20, 319, 239}), "Reading directory");
+  FileInfo_t info;
+  fstatus_t ret;
+  int i = 0;
+  MODULE_CALL_THIS(fs, seek, &fs.fs, dirfd, 0, SEEK_SET);
+  while((ret = MODULE_CALL_THIS(fs, getdirents, &fs.fs, dirfd, &info, 1)) == 1) {
+    char buf[32];
+    snprintf(buf, sizeof(buf), "%s", info.name);
+    MODULE_CALL_THIS(gfx, text, &gfx, ((display_region_t){0, 40 + i * 20, 319, 239}), buf);
+    i++;
+    if (i > 10) {
+      break;
+    }
+  }
 
 
   while(1);

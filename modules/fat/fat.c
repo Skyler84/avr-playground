@@ -363,7 +363,7 @@ fstatus_t fat_read(FileSystem_t *_fs, file_descriptor_t fd, char *_buf, uint16_t
   FAT_SectorCache_t *cache;
   uint32_t offset;
   uint32_t remaining = -1;
-  if (fs->handles[fd].cluster_chain.cluster.current_cluster & 0x0ffffff8 == 0x0ffffff8) {
+  if ((fs->handles[fd].cluster_chain.cluster.current_cluster & 0x0ffffff8) == 0x0ffffff8) {
     return 0; // end of file
   }
   // if (fs->handles[fd].file.current_offset >= fs->handles[fd].size) {
@@ -504,11 +504,9 @@ fstatus_t fat_readdir(FAT_FileSystem_t *fs, file_descriptor_t fd, struct FileInf
   const char *si;
   char *di;
   int i = 0;
-  while(i++<32) {
+  while(i++<64) {
     fstatus_t ret = 32;
-    fs->handles[fd].handle_type = 1;
     ret = indirect_call(fat_read)(&fs->fs, fd, (char*)&dir_entry, sizeof(FAT_DirectoryEntry_t));
-    fs->handles[fd].handle_type = 2;
     if (ret < (long)sizeof(FAT_DirectoryEntry_t)) {  
       return -i; // error reading directory
     }

@@ -128,7 +128,7 @@ int main() {
   const char *path[] = {
     "LAFORT~1",
     "APPS",
-    "BLINKY"
+    "FORTUN~1"
   };
   file_descriptor_t dirfd = MODULE_CALL_THIS(fs, open, &fs.fs, "/", O_RDONLY | O_DIRECTORY);
   for (uint8_t i = 0; i < 3; i++) {

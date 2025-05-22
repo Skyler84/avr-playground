@@ -179,7 +179,7 @@ static void u32_to_hex(uint32_t val, char *buf)
     buf[8] = '\0';
 }
 
-file_descriptor_t gui_choose_file(GUI_t *gui, FileSystem_t *fs, const char */* dir */)
+file_descriptor_t gui_choose_file(GUI_t *gui, FileSystem_t *fs, const char *_dir)
 {
     (void)gui;
     (void)fs;
@@ -189,7 +189,12 @@ file_descriptor_t gui_choose_file(GUI_t *gui, FileSystem_t *fs, const char */* d
     uint8_t num_lines = 6;
     uint8_t line_start = 0;
     // char dir[64] = "/LAFORT~1/APPS";
-    char dir[64] = "/LAFORT~1";
+    if (_dir == NULL)
+    {
+        _dir = "/";
+    }
+    char dir[256];;
+    strncpy(dir, _dir, sizeof(dir));
     // char dir[64] = "/";
     file_descriptor_t dirfd;
     dirfd = MODULE_CALL_THIS(fs, open, fs, dir, O_RDONLY | O_DIRECTORY);
@@ -260,7 +265,7 @@ file_descriptor_t gui_choose_file(GUI_t *gui, FileSystem_t *fs, const char */* d
         }
         char hex[] = "0123456789ABCDEF";
         char buf[32];
-        {
+        if (1){
             MODULE_CALL_THIS(gfx, fill, gui->gfx, BLACK);
             MODULE_CALL_THIS(gfx, nostroke, gui->gfx);
             MODULE_CALL_THIS(gfx, rectangle, gui->gfx, (display_region_t){0, 0, 320, 50});
@@ -269,7 +274,8 @@ file_descriptor_t gui_choose_file(GUI_t *gui, FileSystem_t *fs, const char */* d
             {
                 FAT_FileSystem_t *fatfs = (FAT_FileSystem_t*)fs;
                 // uint32_t val = dirfd;
-                uint32_t val = fatfs->handles[dirfd].cluster_chain.cluster.current_cluster;
+                uint32_t val = fatfs->handles[dirfd].cluster_chain.cluster.sector_start;
+                // uint32_t val = fatfs->handles[dirfd].cluster_chain.cluster.current_cluster;
                 uint8_t i = 0;
                 buf[i++] = 'i';
                 buf[i++] = 'n';
@@ -295,11 +301,14 @@ file_descriptor_t gui_choose_file(GUI_t *gui, FileSystem_t *fs, const char */* d
         MODULE_CALL_THIS(fs, getdirents, fs, dirfd, NULL, 0);
         while ((ret = MODULE_CALL_THIS(fs, getdirents, fs, dirfd, &info, 1)) == 1)
         {
-            char buf[2];
-            buf[0] = hex[x&0x0f];
-            buf[1] = '\0';
-            MODULE_CALL_THIS(gfx, text, gui->gfx, ((display_region_t){x*12, 30, 0, 0}), buf);
-            x+=1;
+            if(0){
+                char buf[2];
+                buf[0] = hex[x&0x0f];
+                buf[1] = '\0';
+                MODULE_CALL_THIS(gfx, text, gui->gfx, ((display_region_t){x*12, 30, 0, 0}), buf);
+                x+=1;
+
+            }
             if (line_no < line_start)
             {
                 line_no++;
@@ -323,10 +332,12 @@ file_descriptor_t gui_choose_file(GUI_t *gui, FileSystem_t *fs, const char */* d
         PINB = 0x80;
         
         // char buf[2];
-        buf[0] = 'A';
-        buf[1] = '\0';
-        MODULE_CALL_THIS(gfx, text, gui->gfx, ((display_region_t){x*12, 30, 0, 0}), buf);
-        x+=1;
+        if(0){
+            buf[0] = 'A';
+            buf[1] = '\0';
+            MODULE_CALL_THIS(gfx, text, gui->gfx, ((display_region_t){x*12, 30, 0, 0}), buf);
+            x+=1;
+        }
         while (1)
         {
             _delay_ms(10);

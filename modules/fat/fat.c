@@ -82,11 +82,21 @@ static uint32_t fat_root_start_sector(FAT_FileSystem_t *fs) {
   }
 }
 
+static uint32_t umulhisi3(uint16_t a, uint16_t b)
+{
+    asm volatile(
+        "movw r26, %A0\n"
+        "movw r18, %A1\n"
+        "ijmp\n"
+        :: "r" (a), "r" (b), "z" (indirect_call(__umulhisi3))
+    );
+    __builtin_unreachable();
+}
 static uint32_t fat_cluster_sector_start(FAT_FileSystem_t *fs, uint32_t cluster) {
   if (cluster == 0) {
     return fs->reserved_sectors + indirect_call(__mulsi3)(fs->num_FATs, fs->sectors_per_FAT);
   } else {
-    return indirect_call(fat_data_start_sector)(fs) + indirect_call(__mulsi3)((cluster - 2), fs->sectors_per_cluster);
+    return indirect_call(fat_data_start_sector)(fs) + indirect_call(umulhisi3)((cluster - 2), fs->sectors_per_cluster);
   }
 }
 

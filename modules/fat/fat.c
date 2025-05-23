@@ -1,5 +1,18 @@
 #include "fat/fat.h"
 #include "module/pic.h"
+#include <string.h>
+#include <ctype.h>
+#include <stddef.h>
+#include <assert.h>
+
+#define ATTR_READ_ONLY     0x01
+#define ATTR_HIDDEN        0x02
+#define ATTR_SYSTEM        0x04 
+#define ATTR_VOLUME_ID     0x08
+#define ATTR_DIRECTORY     0x10
+#define ATTR_ARCHIVE       0x20
+#define ATTR_LONG_NAME      (ATTR_READ_ONLY | ATTR_HIDDEN | ATTR_SYSTEM | ATTR_VOLUME_ID)
+#define ATTR_LONG_NAME_MASK (ATTR_READ_ONLY | ATTR_HIDDEN | ATTR_SYSTEM | ATTR_VOLUME_ID | ATTR_DIRECTORY | ATTR_ARCHIVE)
 
 MODULE_FN_PROTOS(fat, FAT_FUNCTION_EXPORTS)
 
@@ -520,6 +533,28 @@ fstatus_t fat_readdir(FAT_FileSystem_t *fs, file_descriptor_t fd, struct FileInf
     if (ret < (long)sizeof(FAT_DirectoryEntry_t)) {  
       return -i; // error reading directory
     }
+    if ((dir_entry.attr & ATTR_LONG_NAME_MASK) == ATTR_LONG_NAME) {
+      // long name entry
+      if (dir_entry.lfn.ldir_ord & 0x40) {
+        // first entry in LFN
+        entry->name[0] = '\0';
+      }
+      memmove(&entry->name[13], &entry->name[0], sizeof(entry->name) - 13);
+      uint8_t n = 0;
+      for (uint8_t i = 0; i < 5; i++) {
+        entry->name[n++] = dir_entry.lfn.lfn1[i*2];
+      }
+      for (uint8_t i = 0; i < 6; i++) {
+        entry->name[n++] = dir_entry.lfn.lfn2[i*2];
+      }
+      for (uint8_t i = 0; i < 2; i++) {
+        entry->name[n++] = dir_entry.lfn.lfn3[i*2];
+      }
+      continue;
+      static_assert(offsetof(FAT_DirectoryEntry_t, lfn.lfn1) == 1, "LFN1 offset is not correct");
+      static_assert(offsetof(FAT_DirectoryEntry_t, lfn.lfn2) == 14, "LFN2 offset is not correct");
+      static_assert(offsetof(FAT_DirectoryEntry_t, lfn.lfn3) == 28, "LFN3 offset is not correct");
+    }
     if ((uint8_t)dir_entry.filename[0] == (uint8_t)0x00) {
       continue;
     }
@@ -530,25 +565,28 @@ fstatus_t fat_readdir(FAT_FileSystem_t *fs, file_descriptor_t fd, struct FileInf
       // return -4;
       continue; // not file or dir
     }
+    si = dir_entry.filename;
+    di = entry->altname;
     if (dir_entry.attr & 0x10) {
       entry->type = 2; // directory
-      si = dir_entry.filename;
-      di = entry->name;
       for (int i = 0; i < 8; i++) {
         if (*si == ' ') {
           break;
         }
-        *di++ = *si++;
+        *di++ = tolower(*si++);
       }
+      *di++ = '/';
+      char *c = entry->name;
+      while(*c)c++;
+      *c++ = '/';
+      *c = '\0';
     } else {
       entry->type = 1; // file
-      si = dir_entry.filename;
-      di = entry->name;
       for (int i = 0; i < 8; i++) {
         if (*si == ' ') {
           break;
         }
-        *di++ = *si++;
+        *di++ = tolower(*si++);
       }
       *di++ = '.';
       si = dir_entry.ext;
@@ -556,10 +594,25 @@ fstatus_t fat_readdir(FAT_FileSystem_t *fs, file_descriptor_t fd, struct FileInf
         if (*si == ' ') {
           break;
         }
-        *di++ = *si++;
+        *di++ = tolower(*si++);
       }
     }
     *di = '\0';
+    // check if altname matches name
+    // if it doesn't then copy alt name into name.
+    for (uint8_t i = 0; i < 13; i++) {
+      if (entry->altname[i] == 0 && entry->name[i] == 0) {
+        break;
+      }
+      if (entry->altname[i] == '~') {
+        break;
+      }
+      if (toupper(entry->altname[i]) == toupper(entry->name[i])) {
+        continue;
+      }
+      strcpy(entry->name, entry->altname);
+      break;
+    }
     entry->size = dir_entry.file_size;
     if (dir_entry.attr & 0x10) {
       entry->size = -1;

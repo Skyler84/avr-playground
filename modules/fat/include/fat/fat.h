@@ -99,20 +99,32 @@ typedef struct FAT_Handle {
 
 typedef struct FAT_FileSystem FAT_FileSystem_t;
 
-typedef struct {
-  char filename[8];
-  char ext[3];
-  uint8_t attr;
-  uint8_t nt_res;
-  uint8_t crt_time_tenth;
-  uint16_t crt_time;
-  uint16_t crt_date;
-  uint16_t last_access_date;
-  uint16_t high_word_of_cluster;
-  uint16_t write_time;
-  uint16_t write_date;
-  uint16_t low_word_of_cluster;
-  uint32_t file_size;
+typedef union {
+  struct{
+    char filename[8];
+    char ext[3];
+    uint8_t attr;
+    uint8_t nt_res;
+    uint8_t crt_time_tenth;
+    uint16_t crt_time;
+    uint16_t crt_date;
+    uint16_t last_access_date;
+    uint16_t high_word_of_cluster;
+    uint16_t write_time;
+    uint16_t write_date;
+    uint16_t low_word_of_cluster;
+    uint32_t file_size;
+  } __attribute__((packed));
+  struct{
+    uint8_t ldir_ord;
+    uint8_t lfn1[5*2];
+    uint8_t attr;
+    uint8_t ldir_type;
+    uint8_t ldir_chksum;
+    uint8_t lfn2[6*2];
+    uint16_t ldir_fstclust;
+    uint8_t lfn3[2*2];
+  } __attribute__((packed)) lfn;
 } __attribute__((packed)) FAT_DirectoryEntry_t;
 
 

@@ -27,6 +27,7 @@ typedef struct FileInfo {
   uint8_t type;
   uint8_t attr;
   char name[256];
+  char altname[16];
 } FileInfo_t;
 
 typedef struct FileSystem FileSystem_t;

@@ -185,10 +185,11 @@ file_descriptor_t gui_choose_file(GUI_t *gui, FileSystem_t *fs, const char *_dir
     (void)fs;
     FileInfo_t info;
     fstatus_t ret;
+    const uint8_t num_lines = 6;
+    const uint8_t line_spacing = 180/num_lines;
     int8_t selection = 0;
-    uint8_t num_lines = 6;
     uint8_t line_start = 0;
-    // char dir[64] = "/LAFORT~1/APPS";
+    MODULE_CALL_THIS(gfx, textSize, gui->gfx, 24);
     if (_dir == NULL)
     {
         _dir = "/";
@@ -199,7 +200,6 @@ file_descriptor_t gui_choose_file(GUI_t *gui, FileSystem_t *fs, const char *_dir
     file_descriptor_t dirfd;
     dirfd = MODULE_CALL_THIS(fs, open, fs, dir, O_RDONLY | O_DIRECTORY);
     // uint32_t cluster;
-    const uint8_t line_spacing = 30;
     uint8_t selected = 0;
     PINB = 0x80;
     while (1)
@@ -265,7 +265,7 @@ file_descriptor_t gui_choose_file(GUI_t *gui, FileSystem_t *fs, const char *_dir
         }
         char hex[] = "0123456789ABCDEF";
         char buf[32];
-        if (1){
+        if (0){
             MODULE_CALL_THIS(gfx, fill, gui->gfx, BLACK);
             MODULE_CALL_THIS(gfx, nostroke, gui->gfx);
             MODULE_CALL_THIS(gfx, rectangle, gui->gfx, (display_region_t){0, 0, 320, 50});
@@ -290,8 +290,8 @@ file_descriptor_t gui_choose_file(GUI_t *gui, FileSystem_t *fs, const char *_dir
         }
         for (uint8_t ln = 0; ln < num_lines; ln++) {
             display_ycoord_t y = 40 + ln * line_spacing;
-            display_ycoord_t ys = y - (line_spacing - 16) / 2;
-            display_ycoord_t ye = y + (line_spacing + 1 + 16) / 2;
+            display_ycoord_t ys = y - line_spacing / 4;
+            display_ycoord_t ye = y + (line_spacing*3 + 1) / 4;
             MODULE_CALL_THIS(gfx, fill, gui->gfx, colors[ln % 2]);
             MODULE_CALL_THIS(gfx, rectangle, gui->gfx, (display_region_t){10, ys, 309, ye});
             y += 15;
@@ -321,7 +321,7 @@ file_descriptor_t gui_choose_file(GUI_t *gui, FileSystem_t *fs, const char *_dir
             }
             uint8_t ln = line_no - line_start;
             display_ycoord_t y = 40 + ln * line_spacing;
-            y += 15;
+            y += line_spacing/2;
             MODULE_CALL_THIS(gfx, text, gui->gfx, ((display_region_t){40, y, 0, y}), info.name);
             if (line_no == selection)
             {
@@ -368,7 +368,8 @@ file_descriptor_t gui_choose_file(GUI_t *gui, FileSystem_t *fs, const char *_dir
             break;
         }
         PINB = 0x80;
-
+        
+        // clamp selection to range
         if (selection < 0)
         {
             selection = 0;
@@ -377,14 +378,16 @@ file_descriptor_t gui_choose_file(GUI_t *gui, FileSystem_t *fs, const char *_dir
         {
             selection = line_no - 1;
         }
-        if (selection > line_start + num_lines - 1)
+        // move range based on selection
+        if (selection >= line_start + num_lines - 1 && line_start < line_no - num_lines)
         {
-            line_start = selection - num_lines + 1;
+            line_start = selection - num_lines + 2;
         }
-        if (selection < line_start)
+        if (selection <= line_start && line_start > 0)
         {
-            line_start = selection;
+            line_start = selection-1;
         }
+        // clamp line_start
         if (line_start > line_no)
         {
             line_start = line_no - 1;

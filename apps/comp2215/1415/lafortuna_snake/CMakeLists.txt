@@ -23,4 +23,8 @@ target_include_directories(lafortuna-snake
         La-Fortuna-Snake/serial
 )
 
+set_target_properties(lafortuna-snake PROPERTIES 
+  FOLDER "comp2215/1415"
+)
+
 make_avr_app(lafortuna-snake)

@@ -12,4 +12,9 @@ target_include_directories(fortuna-tetris
         FortunaTetris/
         FortunaTetris/lcd/
 )
+
+set_target_properties(fortuna-tetris PROPERTIES 
+  FOLDER "comp2215/1415"
+)
+
 make_avr_app(fortuna-tetris)

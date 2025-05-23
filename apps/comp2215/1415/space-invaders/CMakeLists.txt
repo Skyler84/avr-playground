@@ -14,4 +14,8 @@ target_include_directories(space-invaders
         AVR-Space_Invaders/encoder
 )
 
+set_target_properties(space-invaders PROPERTIES 
+  FOLDER "comp2215/1415"
+)
+
 make_avr_app(space-invaders)

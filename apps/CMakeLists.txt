@@ -78,6 +78,11 @@ function(make_avr_app target)
         COMMAND avrdude -p ${MCU} -c ${PROGRAMMER} -U flash:w:${app}.all.hex
     )
 
+    get_target_property(FOLDER ${target} FOLDER)
+    if ("${FOLDER}" STREQUAL "FOLDER-NOTFOUND")
+        set(FOLDER "")
+    endif()
+
     install(
         FILES 
         # ${CMAKE_CURRENT_BINARY_DIR}/${app}
@@ -85,23 +90,23 @@ function(make_avr_app target)
         ${CMAKE_CURRENT_BINARY_DIR}/${app}.bin
         # ${CMAKE_CURRENT_BINARY_DIR}/${app}.all.hex
         ${CMAKE_CURRENT_BINARY_DIR}/${app}.all.bin
-        DESTINATION ${CMAKE_INSTALL_PREFIX}/apps/${target}
+        DESTINATION ${CMAKE_INSTALL_PREFIX}/apps/${FOLDER}/${target}
     )
 
     set_target_properties(
         ${app} ${app}.hex ${app}.bin ${app}.all.hex ${app}.all.elf ${app}.all.bin
         PROPERTIES
-        FOLDER "Apps/${target}"
+        FOLDER "Apps/${FOLDER}/${target}"
     )
 
     set_target_properties(
         ${app}.mods.bin ${app}.mods.hex
         PROPERTIES
-        FOLDER "Apps/${target}/Modules"
+        FOLDER "Apps/${FOLDER}/${target}/Modules"
     )
 
     set_target_properties(${app}_flash ${app}_flash_all PROPERTIES
-        FOLDER "Apps/${target}/Flash"
+        FOLDER "Apps/${FOLDER}/${target}/Flash"
     )
 
 endfunction()

@@ -12,4 +12,8 @@ target_include_directories(TronFortuna
         TronFortuna/lcd/
 )
 
+set_target_properties(TronFortuna PROPERTIES 
+  FOLDER "comp2215/1415"
+)
+
 make_avr_app(TronFortuna)

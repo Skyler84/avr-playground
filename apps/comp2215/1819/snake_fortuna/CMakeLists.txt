@@ -108,4 +108,8 @@ target_link_libraries(snake-fortuna
     # ${png_blobs}
 )
 
+set_target_properties(snake-fortuna PROPERTIES 
+  FOLDER "comp2215/1819"
+)
+
 make_avr_app(snake-fortuna)

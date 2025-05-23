@@ -1,6 +1,3 @@
-[submodule "apps/comp2215/1314/avr-snake/avr-snake"]
-	path = apps/comp2215/1314/avr-snake/avr-snake
-	url = https://github.com/jake314159/avr-snake
 [submodule "apps/comp2215/1415/space-invaders/AVR-Space_Invaders"]
 	path = apps/comp2215/1415/space-invaders/AVR-Space_Invaders
 	url = https://github.com/Southampton-ECS-COMP2215-Archive/AVR-Space_Invaders

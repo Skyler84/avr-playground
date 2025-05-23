@@ -10,8 +10,8 @@ if(NOT "${BOARD}" STREQUAL "")
     include(boards/${BOARD}.cmake)
 endif()
 
-add_compile_options(-ggdb -g -Os -Wall -Wextra -Werror -fstack-usage)
-add_link_options(-ggdb -g -Os -Wall -Wextra -Werror -mrelax)
+add_compile_options(-ggdb -g -Os -Wall -Wextra -fstack-usage)
+add_link_options(-ggdb -g -Os -Wall -Wextra -mrelax)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 

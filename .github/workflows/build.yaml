@@ -40,9 +40,9 @@ jobs:
           echo "${{github.workspace}}/opt/avr-gcc/bin" >> $GITHUB_PATH
           echo "/opt/avr-gcc/bin" >> $GITHUB_PATH
       - name: checkout repo
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
-          submodules: true
+          submodules: recursive
       - name: build
         run: |
           mkdir build_${{matrix.board}}

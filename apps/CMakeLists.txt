@@ -14,6 +14,8 @@ function(make_avr_app target)
         LINK_MODULES_BINS $<TARGET_PROPERTY:${target},LINK_MODULES_BINS>
         INCLUDE_DIRECTORIES $<TARGET_PROPERTY:${target},INCLUDE_DIRECTORIES>
         LINK_LIBRARIES $<TARGET_PROPERTY:${target},LINK_LIBRARIES>
+        COMPILE_OPTIONS $<TARGET_PROPERTY:${target},COMPILE_OPTIONS>
+        LINK_OPTIONS $<TARGET_PROPERTY:${target},LINK_OPTIONS>
     )
 
     add_custom_command(
@@ -24,7 +26,7 @@ function(make_avr_app target)
 
     add_custom_target(${app}.hex ALL
         DEPENDS ${app}
-        COMMAND avr-objcopy -O ihex ${app} ${app}.hex
+        COMMAND avr-objcopy -R .eeprom -O ihex ${app} ${app}.hex
     )
 
     add_custom_target(${app}.bin ALL

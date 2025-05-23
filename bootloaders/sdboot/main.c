@@ -203,7 +203,7 @@ void __attribute__((noreturn)) sd_boot(gfx_t *gfx) {
       if (ret < (int)page_size) {
         break;
       }
-      if (addr > 0x8000) {
+      if (addr > 0x10000) {
         break;
       }
       // break;

@@ -27,7 +27,6 @@ target_link_libraries(sdboot
         display
         blockdev
         font
-        # boot
         # sd
 )
 

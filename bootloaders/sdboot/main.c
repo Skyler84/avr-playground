@@ -182,7 +182,8 @@ void __attribute__((noreturn)) sd_boot(gfx_t *gfx) {
       goto end;
     }
 
-    file_descriptor_t fd = gui_choose_file(&gui, &fs.fs, "/lafortuna/apps/");
+    file_descriptor_t fd = gui_choose_file(&gui, &fs.fs, "/");
+    // file_descriptor_t fd = gui_choose_file(&gui, &fs.fs, "/lafortuna/apps/");
     gui_msgbox(&gui,"Boot from file", MSGBOX_OK);
     PINB = 0x80;
 

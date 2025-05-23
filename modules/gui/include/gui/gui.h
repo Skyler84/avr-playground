@@ -15,5 +15,6 @@ typedef struct GUI GUI_t;
 
 DECLARE_MODULE(gui, GUI_MODULE_ID, GUI_FUNCTION_EXPORTS);
 struct GUI{
+    gui_fns_t *fns;
     gfx_t *gfx;
 };

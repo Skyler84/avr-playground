@@ -1,5 +1,6 @@
 #include "fat/fat.h"
 #include "module/pic.h"
+#include "module/imports.h"
 #include <string.h>
 #include <ctype.h>
 #include <stddef.h>
@@ -175,7 +176,7 @@ static fstatus_t fat_navigate_directory(FAT_FileSystem_t *fs, file_descriptor_t 
     // now we need to find the file in the directory
     FileInfo_t dir_entry;
     fstatus_t ret = 0;
-    indirect_call(fat_readdir)(fs, fd, NULL);
+    indirect_call(fat_getdirents)(&fs->fs, fd, NULL, 0);
     while ((ret = indirect_call(fat_readdir)(fs, fd, &dir_entry)) == 0) {
       uint32_t cluster_num = dir_entry.inode;
       if (dir_entry.type != 2 && lastchar == '/') {
@@ -529,7 +530,7 @@ fstatus_t fat_readdir(FAT_FileSystem_t *fs, file_descriptor_t fd, struct FileInf
   int i = 0;
   while(i++<64) {
     fstatus_t ret = 32;
-    ret = indirect_call(fat_read)(&fs->fs, fd, (char*)&dir_entry, sizeof(FAT_DirectoryEntry_t));
+    ret = MODULE_CALL_THIS(fs, read, &fs->fs, fd, (char*)&dir_entry, sizeof(FAT_DirectoryEntry_t));
     if (ret < (long)sizeof(FAT_DirectoryEntry_t)) {  
       return -i; // error reading directory
     }
@@ -568,20 +569,15 @@ fstatus_t fat_readdir(FAT_FileSystem_t *fs, file_descriptor_t fd, struct FileInf
     si = dir_entry.filename;
     di = entry->altname;
     if (dir_entry.attr & 0x10) {
-      entry->type = 2; // directory
+      entry->type = FI_TYPE_DIR; // directory
       for (int i = 0; i < 8; i++) {
         if (*si == ' ') {
           break;
         }
         *di++ = tolower(*si++);
       }
-      *di++ = '/';
-      char *c = entry->name;
-      while(*c)c++;
-      *c++ = '/';
-      *c = '\0';
     } else {
-      entry->type = 1; // file
+      entry->type = FI_TYPE_FILE; // file
       for (int i = 0; i < 8; i++) {
         if (*si == ' ') {
           break;
@@ -639,10 +635,6 @@ fstatus_t fat_getdirents(FileSystem_t *_fs, file_descriptor_t fd, struct FileInf
     return -1; // not a directory
   }
   
-  if (fs->handles[fd].handle_type != 2) {
-    return -1; // not a directory
-  }
-
   if (entry == NULL) {
     // reset directory to beginning
     fat_cluster_chain_init(fs, &fs->handles[fd].cluster_chain, fs->handles[fd].cluster_chain.start_cluster);
@@ -660,66 +652,13 @@ fstatus_t fat_getdirents(FileSystem_t *_fs, file_descriptor_t fd, struct FileInf
   uint8_t failsafe = 32;
   while(i < count && failsafe--) {
     fstatus_t ret = 32;
-    ret = indirect_call(fat_readdir)(fs, fd, entry);
+    ret = MODULE_CALL_THIS(fat, readdir, fs, fd, entry);
     if (ret < 0) {
       return i;
     }
     i++;
     entry++;
     continue;
-    fs->handles[fd].handle_type = 1;
-    ret = indirect_call(fat_read)(&fs->fs, fd, (char*)&dir_entry, sizeof(FAT_DirectoryEntry_t));
-    fs->handles[fd].handle_type = 2;
-    if (ret < (long)sizeof(FAT_DirectoryEntry_t)) {  
-      return i; // error reading directory
-    }
-    if ((uint8_t)dir_entry.filename[0] == (uint8_t)0x00) {
-      continue;
-    }
-    if ((uint8_t)dir_entry.filename[0] == (uint8_t)0xE5) {
-      continue; // deleted file
-    }
-    if (dir_entry.attr & ~0x30) {
-      // return -4;
-      continue; // not file or dir
-    }
-    if (dir_entry.attr & 0x10) {
-      i++;
-      // failsafe=255;
-      entry->type = 2; // directory
-      si = dir_entry.filename;
-      di = entry->name;
-      for (int i = 0; i < 8; i++) {
-        if (*si == ' ') {
-          break;
-        }
-        *di++ = *si++;
-      }
-    } else {
-      i++;
-      // failsafe=255;
-      entry->type = 1; // file
-      si = dir_entry.filename;
-      di = entry->name;
-      for (int i = 0; i < 8; i++) {
-        if (*si == ' ') {
-          break;
-        }
-        *di++ = *si++;
-      }
-      *di++ = '.';
-      si = dir_entry.ext;
-      for (int i = 0; i < 3; i++) {
-        if (*si == ' ') {
-          break;
-        }
-        *di++ = *si++;
-      }
-    }
-    *di = '\0';
-    entry->size = dir_entry.file_size;
-    entry->inode = (uint32_t)dir_entry.high_word_of_cluster << 16 | dir_entry.low_word_of_cluster;
-    entry++;
   }
 
 

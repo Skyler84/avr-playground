@@ -17,6 +17,9 @@ typedef int16_t fstatus_t;
 
 #define fs_MODTYPE MODULE
 
+#define FI_TYPE_FILE 1
+#define FI_TYPE_DIR  2
+
 typedef struct {
   void *_data;
 }File;

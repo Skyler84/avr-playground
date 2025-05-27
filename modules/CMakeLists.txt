@@ -83,14 +83,21 @@ function(add_module name)
         BINTARGETS "mod_${name}.bin"
     )
     add_library(mod_interface_${name} INTERFACE)
-    target_compile_definitions(mod_interface_${name}
+    target_compile_options(mod_interface_${name}
         INTERFACE
-            ${name}_MODTYPE=MODULE
+            -U${name}_MODTYPE
+            -D${name}_MODTYPE=MODULE
     )
     target_compile_options(mod_${name}
         PRIVATE
             -nostartfiles
             -nostdlib
+            -U${name}_MODTYPE
+            -D${name}_MODTYPE=MODULE
+    )
+    target_compile_definitions(mod_interface_${name}
+        INTERFACE
+            ${name}_MODTYPE=MODULE
     )
     target_link_options(mod_${name}
         PRIVATE
@@ -115,6 +122,7 @@ function(add_module name)
         PRIVATE
             "$<TARGET_PROPERTY:${name},COMPILE_DEFINITIONS>"
     )
+    # target_
     target_compile_options(mod_${name}
         PRIVATE
             "$<TARGET_PROPERTY:${name},COMPILE_OPTIONS>"
@@ -156,6 +164,7 @@ add_subdirectory(module)
 add_subdirectory(font5x7)
 add_subdirectory(lcd)
 add_subdirectory(sd)
+add_subdirectory(vfs)
 add_subdirectory(fat)
 add_subdirectory(gfx)
 add_subdirectory(boot)

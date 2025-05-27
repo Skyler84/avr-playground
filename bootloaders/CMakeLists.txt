@@ -113,3 +113,4 @@ endfunction()
 
 add_subdirectory(sdboot)
 add_subdirectory(blinky)
+add_subdirectory(rwwtest)

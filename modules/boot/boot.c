@@ -28,6 +28,8 @@ void boot_flash_erase(uint32_t page) {
   eeprom_busy_wait();
   boot_page_erase(page);
   boot_spm_busy_wait(); // Wait until the memory is erased.
+  boot_rww_enable ();
+  // Re-enable interrupts (if they were ever enabled).
   SREG = sreg; // Re-enable interrupts.
 }
 

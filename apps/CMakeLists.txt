@@ -15,6 +15,7 @@ function(make_avr_app target)
         INCLUDE_DIRECTORIES $<TARGET_PROPERTY:${target},INCLUDE_DIRECTORIES>
         LINK_LIBRARIES $<TARGET_PROPERTY:${target},LINK_LIBRARIES>
         COMPILE_OPTIONS $<TARGET_PROPERTY:${target},COMPILE_OPTIONS>
+        COMPILE_DEFINITIONS $<TARGET_PROPERTY:${target},COMPILE_DEFINITIONS>
         LINK_OPTIONS $<TARGET_PROPERTY:${target},LINK_OPTIONS>
     )
 
@@ -81,7 +82,10 @@ function(make_avr_app target)
     get_target_property(FOLDER ${target} FOLDER)
     if ("${FOLDER}" STREQUAL "FOLDER-NOTFOUND")
         set(FOLDER "")
+    else()
+        set(FOLDER "${FOLDER}/")
     endif()
+
 
     install(
         FILES 
@@ -90,7 +94,7 @@ function(make_avr_app target)
         ${CMAKE_CURRENT_BINARY_DIR}/${app}.bin
         # ${CMAKE_CURRENT_BINARY_DIR}/${app}.all.hex
         ${CMAKE_CURRENT_BINARY_DIR}/${app}.all.bin
-        DESTINATION ${CMAKE_INSTALL_PREFIX}/apps/${FOLDER}/${target}
+        DESTINATION ${CMAKE_INSTALL_PREFIX}/apps/${FOLDER}${target}
     )
 
     set_target_properties(
@@ -119,3 +123,4 @@ add_subdirectory(lcd_test)
 add_subdirectory(gfx_test)
 add_subdirectory(fat_test)
 add_subdirectory(comp2215)
+add_subdirectory(bootjacker)

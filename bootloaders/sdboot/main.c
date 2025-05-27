@@ -40,7 +40,7 @@ void __attribute__((noreturn)) app_reboot() {
 
 void __attribute__((noreturn)) bl_reboot() {
   // reboot bootloader?
-  ((void(*)())0x0000)();
+  asm volatile("jmp 0x1e000"::);
   __builtin_unreachable();
 }
 
@@ -94,16 +94,6 @@ err:
   return -1;
 }
 
-
-char hex[] = "0123456789ABCDEF";
-lcd_t lcd;
-void lcd_debug_u16(lcd_xcoord_t /* x */, lcd_ycoord_t /* y */, uint16_t /* val */) {
-  // .display_char(x, y, 1, fonts_fns.get_default(), &fonts_fns, hex[(val>>12)&0x0f], WHITE);
-  // .display_char(x+6, y, 1, fonts_fns.get_default(), &fonts_fns, hex[(val>>8)&0x0f], WHITE);
-  // .display_char(x+12, y, 1, fonts_fns.get_default(), &fonts_fns, hex[(val>>4)&0x0f], WHITE);
-  // .display_char(x+18, y, 1, fonts_fns.get_default(), &fonts_fns, hex[(val>>0)&0x0f], WHITE);
-}
-
 void __attribute__((noreturn)) sd_boot(gfx_t *gfx) {
   MODULE_CALL_THIS(gfx, nostroke, gfx);
   MODULE_CALL_THIS(gfx, fill, gfx, BLACK);
@@ -111,6 +101,7 @@ void __attribute__((noreturn)) sd_boot(gfx_t *gfx) {
   MODULE_CALL_THIS(gfx, fill, gfx, WHITE);
   MODULE_CALL_THIS(gfx, text, gfx, ((display_region_t){0, 20, 319, 239}), "Booting from SD card");
 
+  uint_farptr_t msgp;
 
   sd_fns_t sd_fns;
   MODULE_IMPORT_FUNCTIONS_RUNTIME(sd, SD_MODULE_ID, SD_FUNCTION_EXPORTS, &sd_fns);
@@ -154,15 +145,12 @@ void __attribute__((noreturn)) sd_boot(gfx_t *gfx) {
     uint8_t errno;
     if ((errno = MODULE_CALL_FNS(sd, initialise, &sd_fns)) != 0) {
       static const char msg[] = "Error initializing card";
-      // static const char msg[] PROGMEM = "Error initializing card";
-      // char buf[32];
-      // snprintf(buf, sizeof(buf), "%s %d", msg, errno);
-      gui_msgbox(&gui, msg, MSGBOX_OK);
+      msgp = pgm_get_far_address(msg);
       goto end;
     }
     if (partitions_init(&root_bd, &partition_bd) != 0) {
       static const char msg[] PROGMEM = "Error initializing partitions";
-      gui_msgboxP(&gui, pgm_get_far_address(msg), MSGBOX_OK);
+      msgp = pgm_get_far_address(msg);
       goto end;
     }
   }
@@ -174,11 +162,10 @@ void __attribute__((noreturn)) sd_boot(gfx_t *gfx) {
     fs.fns = &fat_fns;
     MODULE_CALL_THIS(fat, init, &fs, &partition_bd);
     fstatus_t ret;
-    // char hex[] = "0123456789ABCDEF";
     ret = MODULE_CALL_THIS(fs, mount, &fs.fs, false, false);
     if (ret != 0) {
-      const char msg[] = "Error mounting filesystem";
-      gui_msgbox(&gui,msg, MSGBOX_OK);
+      static const char msg[] PROGMEM = "Error mounting filesystem";
+      msgp = pgm_get_far_address(msg);
       goto end;
     }
 
@@ -222,6 +209,7 @@ void __attribute__((noreturn)) sd_boot(gfx_t *gfx) {
 
 
 end:
+  gui_msgboxP(&gui, msgp, MSGBOX_OK);
   error();
 while(1);
 }

@@ -21,13 +21,11 @@ target_link_modules(sdboot
 )
 target_link_libraries(sdboot
     PRIVATE
-        # ld_debug
         module
         boot
         display
         blockdev
         font
-        # sd
 )
 
 target_compile_options(sdboot

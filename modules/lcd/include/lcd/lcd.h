@@ -38,7 +38,7 @@ typedef struct lcd lcd_t;
 
 
 #define LCD_API_VER 1
-#define LCD_MODULE_ID 0x0100
+#define LCD_MODULE_ID 0x0101
 
 DECLARE_MODULE(lcd, LCD_MODULE_ID, LCD_FUNCTION_EXPORTS);
 

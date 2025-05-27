@@ -2,9 +2,11 @@
 
 #include "fs/fs.h"
 #include "gfx/gfx.h"
+#include "buttons/buttons.h"
 
 typedef struct GUI{
     gfx_t *gfx;
+    buttons_fns_t *buttons_fns;
 } GUI_t;
 
 enum msgbox_type_t {

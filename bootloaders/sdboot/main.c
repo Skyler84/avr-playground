@@ -12,8 +12,6 @@
 #include <avr/boot.h>
 
 #include "main.h"
-#include "encoder.h"
-#include "buttons.h"
 #include "gui.h"
 
 #include "module/imports.h"
@@ -23,6 +21,8 @@
 #include "fat/fat.h"
 #include "blockdev/blockdev.h"
 #include "boot/boot.h"
+#include "buttons/buttons.h"
+#include "buttons.h"
 
 
 
@@ -106,9 +106,13 @@ void __attribute__((noreturn)) sd_boot(gfx_t *gfx) {
   sd_fns_t sd_fns;
   MODULE_IMPORT_FUNCTIONS_RUNTIME(sd, SD_MODULE_ID, SD_FUNCTION_EXPORTS, &sd_fns);
 
+  buttons_fns_t buttons_fns;
+  MODULE_IMPORT_FUNCTIONS_RUNTIME(buttons, BUTTONS_MODULE_ID, BUTTONS_FUNCTION_EXPORTS, &buttons_fns);
+
   MODULE_CALL_FNS(sd, preinit, &sd_fns);
   GUI_t gui = {
     .gfx = gfx,
+    .buttons_fns = &buttons_fns,
   };
 
   gui_init(&gui);
@@ -217,11 +221,6 @@ while(1);
 extern void blink_bits(uint32_t value, uint8_t nbits);
 
 static void __attribute__((noreturn)) run_interactive() {
-  DDRB |= 0x80;
-  DDRE &= ~0x80;
-  PORTE |= 0x80;
-  DDRC &= ~0x3C;
-  PORTC |= 0x3C;
   lcd_fns_t lcd_fns;
   gfx_fns_t gfx_fns;
   font5x7_fns_t font_fns;
@@ -241,10 +240,19 @@ static void __attribute__((noreturn)) run_interactive() {
     .fns = &font_fns,
   };
 
+  buttons_fns_t buttons_fns;
+  MODULE_IMPORT_FUNCTIONS_RUNTIME(buttons, BUTTONS_MODULE_ID, BUTTONS_FUNCTION_EXPORTS, &buttons_fns);
+  MODULE_CALL_FNS(buttons, init, &buttons_fns);
+
   const char *menu[] = {
     ("Boot from SD file"),
     ("Reboot application")
   };
+
+  // const char *menu[] = {
+  //   ("1"),
+  //   ("2")
+  // };
 
   typedef __attribute__((noreturn)) void (*menu_func_t)(gfx_t *gfx);
   menu_func_t menu_func[] = {
@@ -267,29 +275,19 @@ static void __attribute__((noreturn)) run_interactive() {
   PINB = 0x80;
   int8_t selection = 0;
   __attribute__((noreturn)) menu_func_t func = NULL;
-  encoder_init();
-  DDRE &= ~0x80;
-  PORTE |= 0x80;
-  int8_t dt = 0;
   while (func == NULL) {
     wdt_reset();
-    if (button_clicked(BTN_C)) {
+    if (MODULE_CALL_FNS(buttons, clicked, &buttons_fns, BTN_ID_CENTER)) {
       func = menu_func[selection];
       break;
     }
-    dt = encoder_dt(0);
-    int8_t sign = 0;
-    if (dt >= 2 || dt < -2) {
-      sign = dt > 0 ? 1 : -1;
-    } else if (button_clicked(BTN_N)) {
+    if (MODULE_CALL_FNS(buttons, clicked, &buttons_fns, BTN_ID_NORTH)) {
       selection--;
-    } else if (button_clicked(BTN_S)) {
+    } else if (MODULE_CALL_FNS(buttons, clicked, &buttons_fns, BTN_ID_SOUTH)) {
       selection++;
     } else {
       continue;
     }
-    encoder_dt(sign*2);
-    selection += sign;
     if (selection < 0) {
       selection = 0;
     } else if (selection > 1) {
@@ -327,10 +325,6 @@ int main() {
 
   DDRB = 0x80;
   PORTB |= 0x80;
-  // while(1) {
-  //   PINB = 0x80;
-  //   _delay_ms(1000);
-  // }
 
   run_interactive();
   __builtin_unreachable();

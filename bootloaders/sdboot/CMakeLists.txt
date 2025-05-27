@@ -18,6 +18,7 @@ target_link_modules(sdboot
         lcd
         gfx
         font5x7
+        buttons
 )
 target_link_libraries(sdboot
     PRIVATE

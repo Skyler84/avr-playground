@@ -5,7 +5,6 @@
 #include "font/font.h"
 #include "gfx/gfx.h"
 #include "encoder.h"
-#include "buttons.h"
 #include <stdint.h>
 #include <avr/pgmspace.h>
 #include <util/delay.h>
@@ -58,13 +57,10 @@ void gui_init(GUI_t *gui)
 {
     (void)gui;
     // initialize buttons
-    DDRE &= ~0x80;
-    PORTE |= 0x80;
-    DDRC &= ~0x3C;
-    PORTC |= 0x3C;
+    MODULE_CALL_FNS(buttons, init, gui->buttons_fns);
 
     // initialize encoder
-    encoder_init();
+    // encoder_init();
 }
 
 #define pgm_read_byte_elpm(addr)   \
@@ -149,7 +145,7 @@ int8_t gui_msgbox(GUI_t *gui, const char* msg, enum msgbox_type_t type)
         MODULE_CALL_THIS(gfx, fill, gui->gfx, BLACK);
         MODULE_CALL_THIS(gfx, textP, gui->gfx, ((display_region_t){x-3*my_strlen_P(0x10000UL|(uintptr_t)s), 148, 0, 157}), 0x10000UL|(uintptr_t)s);
     }
-    wait_button_click(BTN_C);
+    MODULE_CALL_FNS(buttons, wait_for_click, gui->buttons_fns, BTN_ID_CENTER);
     return 0;
 }
 
@@ -170,6 +166,7 @@ int8_t gui_msgboxP(GUI_t *gui, uint32_t msgP, enum msgbox_type_t type)
 
 file_descriptor_t gui_choose_file(GUI_t *gui, FileSystem_t *fs, const char *_dir)
 {
+    return -1;
     (void)gui;
     (void)fs;
     FileInfo_t info;
@@ -291,18 +288,19 @@ file_descriptor_t gui_choose_file(GUI_t *gui, FileSystem_t *fs, const char *_dir
         while (1)
         {
             _delay_ms(10);
-            int8_t dt = encoder_dt(0);
-            if (button_clicked(BTN_N))
+            int8_t dt;// = encoder_dt(0);
+            dt = 0;
+            if (MODULE_CALL_FNS(buttons, clicked, gui->buttons_fns, BTN_ID_NORTH))
             {
                 selection--;
                 break;
             }
-            if (button_clicked(BTN_S))
+            if (MODULE_CALL_FNS(buttons, clicked, gui->buttons_fns, BTN_ID_SOUTH))
             {
                 selection++;
                 break;
             }
-            if (button_clicked(BTN_C))
+            if (MODULE_CALL_FNS(buttons, clicked, gui->buttons_fns, BTN_ID_CENTER))
             {
                 // button pressed
                 selected = selection + 1;
@@ -313,7 +311,7 @@ file_descriptor_t gui_choose_file(GUI_t *gui, FileSystem_t *fs, const char *_dir
                 continue;
             }
             int8_t sign = dt > 0 ? 1 : -1;
-            encoder_dt(dt);
+            // encoder_dt(dt);
             selection += sign;
             break;
         }

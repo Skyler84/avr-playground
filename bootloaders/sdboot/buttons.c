@@ -16,17 +16,17 @@ static const struct btn_t btns[] = {
     {&PINC, 0x20}, // BTN_S
 };
 
-int8_t is_button_pressed(enum btn_id_t btn_id)
+int8_t is_button_pressed(enum _btn_id_t btn_id)
 {
     return !(*(btns[btn_id].port) & btns[btn_id].bit);
 }
 
-int8_t is_button_released(enum btn_id_t btn_id)
+int8_t is_button_released(enum _btn_id_t btn_id)
 {
     return !is_button_pressed(btn_id);
 }
 
-int8_t button_clicked(enum btn_id_t btn_id)
+int8_t button_clicked(enum _btn_id_t btn_id)
 {
     // check if button is clicked
     if (is_button_released(btn_id))
@@ -37,7 +37,7 @@ int8_t button_clicked(enum btn_id_t btn_id)
     return 1;
 }
 
-void wait_button_press(enum btn_id_t btn_id)
+void wait_button_press(enum _btn_id_t btn_id)
 {
     int timeout = 0;
     while (timeout++ < 100)
@@ -49,7 +49,7 @@ void wait_button_press(enum btn_id_t btn_id)
     }
 }
 
-void wait_button_release(enum btn_id_t btn_id)
+void wait_button_release(enum _btn_id_t btn_id)
 {
     int timeout = 0;
     while (timeout++ < 100)
@@ -61,7 +61,7 @@ void wait_button_release(enum btn_id_t btn_id)
     }
 }
 
-void wait_button_click(enum btn_id_t btn_id)
+void wait_button_click(enum _btn_id_t btn_id)
 {
     // wait for button press
     wait_button_press(btn_id);

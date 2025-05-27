@@ -16,10 +16,11 @@ fn_ptr_t module_fn_lookup(uint16_t _id, moduleptr_t module) {
   if (fn == 0) {
     return NULL;
   }
+  uint16_t module_type = pgm_read_word_far(module + offsetof(module_t, type));
   uint16_t id;
   while ((id = pgm_read_word_far(fn + (uint32_t)offsetof(module_fn_t, id))) != 0x0000U) {
     if (id == _id) {
-      return (fn_ptr_t)(pgm_read_word_far(fn + (uint32_t)offsetof(module_fn_t, fn)) + pgm_ptr_to_fn_ptr(module));
+      return (fn_ptr_t)(pgm_read_word_far(fn + (uint32_t)offsetof(module_fn_t, fn)) + (module_type == MODULE_TYPE_MODULE?pgm_ptr_to_fn_ptr(module):0));
     }
     fn+= sizeof(module_fn_t); 
   }

@@ -127,6 +127,6 @@ extern void module_runtime_init_error_handler(module_id_t, moduleptr_t*, uint16_
 
 
 #define MODULE_API_VER 0x0001
-#define MODULE_MODULE_ID 0x0000
+#define MODULE_MODULE_ID 0x0010
 
 DECLARE_MODULE(module, MODULE_MODULE_ID, MODULE_FUNCTION_EXPORTS);

@@ -603,7 +603,8 @@ fstatus_t fat_readdir(FAT_FileSystem_t *fs, file_descriptor_t fd, struct FileInf
       if (entry->altname[i] == '~') {
         break;
       }
-      if (toupper(entry->altname[i]) == toupper(entry->name[i])) {
+      if (indirect_call(toupper)(entry->altname[i]) == indirect_call(toupper)(entry->name[i])) {
+      // if (toupper(entry->altname[i]) == toupper(entry->name[i])) {
         continue;
       }
       strcpy(entry->name, entry->altname);
@@ -646,8 +647,6 @@ fstatus_t fat_getdirents(FileSystem_t *_fs, file_descriptor_t fd, struct FileInf
   for(int i = 0; i < 32; i++) {
     ((uint8_t*)&dir_entry)[i] = 0;
   }
-  const char *si;
-  char *di;
   uint16_t i = 0;
   uint8_t failsafe = 32;
   while(i < count && failsafe--) {

@@ -12,7 +12,7 @@ typedef struct font5x7 font5x7_t;
   
 
 #define FONT5X7_API_VER 1
-#define FONT5X7_MODULE_ID 0x0101
+#define FONT5X7_MODULE_ID 0x0111  
 
 #ifndef font5x7_MODTYPE
 #error "font5x7_MODTYPE not defined"

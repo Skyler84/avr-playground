@@ -65,6 +65,24 @@ bool font5x7_get_char_pixel(const font_t *font, wchar_t c, display_coord_t coord
   return false;
 }
 
+void font5x7_get_char_pixels(const font_t *font, wchar_t c, display_region_t box, uint8_t *out, uint16_t scale)
+{
+  for (uint8_t y = box.y1; y <= box.y2; y++)
+  {
+    for (uint8_t x = box.x1; x <= box.x2; x++)
+    {
+      if (font5x7_get_char_pixel(font, c, (display_coord_t){x, y}, scale))
+      {
+        out[x - box.x1 + (y - box.y1) * (box.x2 - box.x1 + 1)] = 1;
+      }
+      else
+      {
+        out[x - box.x1 + (y - box.y1) * (box.x2 - box.x1 + 1)] = 0;
+      }
+    }
+  }
+}
+
 display_coord_t font5x7_get_char_advance(const font_t *font, wchar_t c, uint16_t scale)
 {
   (void)font;

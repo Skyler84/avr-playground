@@ -33,6 +33,6 @@ typedef struct {
     o(modname, write_sector, status_t, const BlockDev*, uint32_t, const uint8_t*)
 
 #define BLOCKDEV_API_VER 1
-#define BLOCKDEV_MODULE_ID 0x0104
+#define BLOCKDEV_MODULE_ID 0x0120
 
 DECLARE_MODULE(blockdev, BLOCKDEV_MODULE_ID, BLOCKDEV_FUNCTION_EXPORTS);

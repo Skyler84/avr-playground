@@ -12,6 +12,6 @@
   o(modname, wrblock,    uint8_t, void*, uint32_t, const uint8_t*)
 
 #define SD_API_VER 1
-#define SD_MODULE_ID 0x0103
+#define SD_MODULE_ID 0x0121
 
 DECLARE_MODULE(sd, SD_MODULE_ID, SD_FUNCTION_EXPORTS);

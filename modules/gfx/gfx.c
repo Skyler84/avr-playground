@@ -2,6 +2,7 @@
 #include "module/imports.h"
 #include "module/pic.h"
 #include <avr/pgmspace.h>
+#include <alloca.h>
 
 uint32_t multiply(uint16_t a, uint16_t b)
 {
@@ -267,13 +268,17 @@ void gfx_char(gfx_t *gfx, gfx_coord_t pos, char c)
 
 
     display_region_t char_bounds = MODULE_CALL_THIS(font, char_get_bounds, gfx->font, c, gfx->textSize);
+    uint8_t *buf = alloca((char_bounds.x2 - char_bounds.x1 + 1) * (char_bounds.y2 - char_bounds.y1 + 1));
+    MODULE_CALL_THIS(font, get_char_pixels, gfx->font, c, char_bounds, buf, gfx->textSize);
     uint16_t pixel_count = 0;
     uint8_t i, j;
     for (j = char_bounds.y1; j <= char_bounds.y2; j++)
     {
         for (i = char_bounds.x1; i <= char_bounds.x2; i++)
         {
-            if (MODULE_CALL_THIS(font, get_char_pixel, gfx->font, c, (gfx_coord_t){i, j}, gfx->textSize))
+            uint16_t idx = (i - char_bounds.x1) + (j - char_bounds.y1) * (char_bounds.x2 - char_bounds.x1 + 1);
+            if (buf[idx])
+            // if (MODULE_CALL_THIS(font, get_char_pixel, gfx->font, c, (gfx_coord_t){i, j}, gfx->textSize))
             {
                 pixel_count++;
             } else if (pixel_count) {

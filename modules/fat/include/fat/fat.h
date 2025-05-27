@@ -142,7 +142,7 @@ extern FileInfo_t dir_entry;
 
 
 #define FAT_API_VER 1
-#define FAT_MODULE_ID 0x0105
+#define FAT_MODULE_ID 0x0131
 
 DECLARE_MODULE(fat, FAT_MODULE_ID, FAT_FUNCTION_EXPORTS);
 

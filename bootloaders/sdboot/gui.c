@@ -158,9 +158,10 @@ int8_t gui_msgboxP(GUI_t *gui, uint32_t msgP, enum msgbox_type_t type)
     (void)gui;
     (void)msgP;
     (void)type;
-    int len = my_strlen_P(msgP);
-    char *buf = alloca(len + 1);
-    for (int i = 0; i < len; i++)
+    size_t len = my_strlen_P(msgP);
+    char buf[64];
+    len = (len > (sizeof(buf) - 1)) ? (sizeof(buf) - 1) : len;
+    for (size_t i = 0; i < len; i++)
     {
         buf[i] = pgm_read_byte_far(msgP + i);
     }

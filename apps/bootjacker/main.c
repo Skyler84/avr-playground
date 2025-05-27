@@ -422,16 +422,16 @@ int main()
     MODULE_CALL_THIS(fs, seek, &fs.fs, fd, 0, SEEK_SET);
     switch(get_boot_size()) {
       case boot_size_512_words:
-        println("Bootloader size: 512 words (1K)");
+        println("Bootloader size: 1KB");
         break;
       case boot_size_1024_words:
-        println("Bootloader size: 1024 words (2K)");
+        println("Bootloader size: 2KB");
         break;
       case boot_size_2048_words:
-        println("Bootloader size: 2048 words (4K)");
+        println("Bootloader size: 4KB");
         break;
       case boot_size_4096_words:
-        println("Bootloader size: 4096 words (8K)");
+        println("Bootloader size: 8KB");
         break;
     }
     page_addr = 0x20000UL - boot_size_to_bytes(get_boot_size()); // start of the bootloader section

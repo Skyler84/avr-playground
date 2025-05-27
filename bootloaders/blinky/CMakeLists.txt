@@ -10,6 +10,12 @@ target_include_directories(blinky_boot
   ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
+target_link_libraries(blinky_boot
+  PRIVATE
+  module
+  boot
+)
+
 if ("${BOARD}" STREQUAL "lafortuna")
   set_target_properties(blinky_boot
     PROPERTIES

@@ -35,7 +35,8 @@ function(target_link_modules target)
         else()
             message (FATAL_ERROR "Module ${module} not found")
         endif()
-        if (TARGET mod_${TARGET} AND NOT ${module} STREQUAL "module")
+        # if we're linking a module to another module, link to the mod_interface
+        if (TARGET "mod_${TARGET}" AND NOT "${module}" STREQUAL "module")
             target_link_libraries(mod_interface_${TARGET} INTERFACE mod_interface_${module})
         endif()
         
@@ -48,6 +49,8 @@ function(add_module name)
     target_compile_definitions(${name}
         PUBLIC
             ${name}_MODTYPE=STATIC
+        PRIVATE
+            MODULE_AS_STATIC_LIB
     )
     add_custom_command(
         TARGET ${name}
@@ -87,6 +90,7 @@ function(add_module name)
         INTERFACE
             -U${name}_MODTYPE
             -D${name}_MODTYPE=MODULE
+            # -UMODULE_AS_STATIC_LIB
     )
     target_compile_options(mod_${name}
         PRIVATE
@@ -94,6 +98,7 @@ function(add_module name)
             -nostdlib
             -U${name}_MODTYPE
             -D${name}_MODTYPE=MODULE
+            -UMODULE_AS_STATIC_LIB
     )
     target_compile_definitions(mod_interface_${name}
         INTERFACE
@@ -133,12 +138,8 @@ function(add_module name)
             "$<TARGET_PROPERTY:${name},LINK_OPTIONS>"
             -B ${CMAKE_SOURCE_DIR}/modules/module/device-specs
     )
-    # target_link_libraries(mod_${name}
-    #     PRIVATE
-    #         "$<TARGET_PROPERTY:${name},LINK_LIBRARIES>"
-    # )
     if (NOT ${name} STREQUAL "module")
-        target_link_libraries(${name} PRIVATE mod_interface_module)
+        # target_link_libraries(${name} PRIVATE mod_interface_module)
     endif()
 
     set_target_properties(
@@ -169,3 +170,4 @@ add_subdirectory(fat)
 add_subdirectory(gfx)
 add_subdirectory(boot)
 add_subdirectory(buttons)
+add_subdirectory(gui)

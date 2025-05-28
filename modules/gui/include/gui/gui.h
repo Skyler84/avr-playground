@@ -2,13 +2,29 @@
 
 #include "module/module.h"
 #include "buttons/buttons.h"
+#include "fs/fs.h"
+#include "gfx/gfx.h"
+
+#include <inttypes.h>
 
 typedef struct GUI GUI_t;
 
+typedef enum msgbox_type {
+    MSGBOX_OK = 0,
+    MSGBOX_OKCANCEL,
+    MSGBOX_YESNOCANCEL,
+    MSGBOX_YESNO,
+    MSGBOX_RETRYCANCEL,
+    MSGBOX_CANCELRETRYCONTINUE,
+    MSGBOX_ABORTRETRYIGNORE,
+} msgbox_type_t;
+    
+
+
 #define GUI_FUNCTION_EXPORTS(modname, o) \
     o(modname, init, void, GUI_t *gui) \
-    o(modname, msgboxP, int8_t, GUI_t *gui, uint32_t msgP, enum msgbox_type_t type) \
-    o(modname, msgbox, int8_t, GUI_t *gui, const char* msg, enum msgbox_type_t type) \
+    o(modname, msgboxP, int8_t, GUI_t *gui, uint_farptr_t msgP, msgbox_type_t type) \
+    o(modname, msgbox, int8_t, GUI_t *gui, const char* msg, msgbox_type_t type) \
     o(modname, choose_file, int8_t, GUI_t *gui, FileSystem_t *fs, const char *path)
 
 #define GUI_MODULE_ID 0x0107

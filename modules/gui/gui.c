@@ -1,10 +1,9 @@
-#include "gui.h"
+#include "gui/gui.h"
 #include "display/display.h"
 #include "module/imports.h"
 #include "module/pic.h"
 #include "font/font.h"
 #include "gfx/gfx.h"
-#include "encoder.h"
 #include <stdint.h>
 #include <avr/pgmspace.h>
 #include <util/delay.h>
@@ -32,7 +31,7 @@ const char s_continue[] PROGMEM = "Continue";
 const char s_abort[] PROGMEM = "Abort";
 const char s_ignore[] PROGMEM = "Ignore";
 
-const char * const strings[] PROGMEM = {
+const char* const strings[] PROGMEM = {
     s_ok,
     s_cancel,
     s_yes,
@@ -42,6 +41,19 @@ const char * const strings[] PROGMEM = {
     s_abort,
     s_ignore,
 };
+
+uint_farptr_t get_string(uint8_t id)
+{
+    // hack to avoid several things.
+    // 1. can't put farptr_t address in PROGMEM
+    // 2. can't use switch statement as compiler turns it into
+    //    a jump table in progmem which is not PIC
+    uint_farptr_t module_offset = GET_MODULE_DATA_PTR_OFFSET();
+    uint_farptr_t s = pgm_get_far_address(s_ok) + module_offset;;
+    uint_farptr_t strings_addr = pgm_get_far_address(strings) + module_offset;
+    uintptr_t diff = pgm_read_word(strings_addr + id * sizeof(uintptr_t)) - pgm_read_word(strings_addr);
+    return s + diff;
+}
 
 const uint8_t btn_strings[7][3] PROGMEM = {
     {0, -1, -1},
@@ -55,49 +67,15 @@ const uint8_t btn_strings[7][3] PROGMEM = {
 
 void gui_init(GUI_t *gui)
 {
+    return;
     (void)gui;
     // initialize buttons
     MODULE_CALL_FNS(buttons, init, gui->buttons_fns);
-
-    // initialize encoder
-    // encoder_init();
 }
 
-#define pgm_read_byte_elpm(addr)   \
-(__extension__({                \
-    uint16_t __addr16 = (uint16_t)(addr); \
-    uint8_t __result;           \
-    __asm__ __volatile__        \
-    (                           \
-        "elpm" "\n\t"           \
-        "mov %0, r0" "\n\t"     \
-        : "=r" (__result)       \
-        : "z" (__addr16)        \
-        : "r0"                  \
-    );                          \
-    __result;                   \
-}))
-
-#define pgm_read_word_elpm(addr)         \
-(__extension__({                            \
-    uint16_t __addr16 = (uint16_t)(addr);   \
-    uint16_t __result;                      \
-    __asm__ __volatile__                    \
-    (                                       \
-        "elpm"           "\n\t"              \
-        "mov %A0, r0"   "\n\t"              \
-        "adiw r30, 1"   "\n\t"              \
-        "elpm"           "\n\t"              \
-        "mov %B0, r0"   "\n\t"              \
-        : "=r" (__result), "=z" (__addr16)  \
-        : "1" (__addr16)                    \
-        : "r0"                              \
-    );                                      \
-    __result;                               \
-}))
-
-int8_t gui_msgbox(GUI_t *gui, const char* msg, enum msgbox_type_t type)
+int8_t gui_msgbox(GUI_t *gui, const char* msg, msgbox_type_t type)
 {
+    uint_farptr_t module_offset = GET_MODULE_DATA_PTR_OFFSET();
     (void)gui;
     (void)type;
     type = 0;
@@ -112,25 +90,31 @@ int8_t gui_msgbox(GUI_t *gui, const char* msg, enum msgbox_type_t type)
     MODULE_CALL_THIS(gfx, fill, gui->gfx, BLUE);
     MODULE_CALL_THIS(gfx, nostroke, gui->gfx);
     MODULE_CALL_THIS(gfx, rectangle, gui->gfx, region);
+
     int len = strlen(msg);
     MODULE_CALL_THIS(gfx, fill, gui->gfx, WHITE);
     MODULE_CALL_THIS(gfx, textSize, gui->gfx, 12);
     MODULE_CALL_THIS(gfx, text, gui->gfx, ((display_region_t){160 - 3 * len, 130-boxh/3, 0, 0}), msg);
+
     uint8_t btn_count = 0;
     for (uint8_t i = 0; i < 3; i++)
     {
-        if (pgm_read_byte_elpm(&btn_strings[type][i]) != 0xFF)
+        uint_farptr_t addr = pgm_get_far_address(btn_strings) + sizeof(btn_strings[0]) * type + i;
+        if (pgm_read_byte_far(addr + module_offset) != (uint8_t)-1)
         {
             btn_count++;
         }
     }
+    btn_count = 1;
     uint8_t spacing = 65;
     uint8_t w = 60;
 
     for (uint8_t i = 0; i < btn_count; i++)
     {
         uint8_t x = 160 - (btn_count - 1) * spacing / 2 + i * spacing;
-        uint8_t btn_id = pgm_read_byte_elpm(&btn_strings[type][i]);
+        uint_farptr_t addr = pgm_get_far_address(btn_strings) + sizeof(btn_strings[0]) * type + i;
+        uint8_t btn_id = pgm_read_byte_far(addr + module_offset);
+        btn_id = 0;
         display_region_t region = {
             .x1 = x - w / 2,
             .x2 = x + w / 2,
@@ -141,16 +125,17 @@ int8_t gui_msgbox(GUI_t *gui, const char* msg, enum msgbox_type_t type)
         MODULE_CALL_THIS(gfx, rectangle, gui->gfx, region);
         if (btn_id > 7)
             continue;
-        const char *s = (const char*)pgm_read_word_elpm(&strings[btn_id]);
+        uint_farptr_t s = get_string(btn_id);
         MODULE_CALL_THIS(gfx, fill, gui->gfx, BLACK);
-        MODULE_CALL_THIS(gfx, textP, gui->gfx, ((display_region_t){x-3*my_strlen_P(0x10000UL|(uintptr_t)s), 148, 0, 157}), 0x10000UL|(uintptr_t)s);
+        MODULE_CALL_THIS(gfx, textP, gui->gfx, ((display_region_t){x-3*my_strlen_P(s), 148, 0, 157}), s);
     }
     MODULE_CALL_FNS(buttons, wait_for_click, gui->buttons_fns, BTN_ID_CENTER);
     return 0;
 }
 
-int8_t gui_msgboxP(GUI_t *gui, uint32_t msgP, enum msgbox_type_t type)
+int8_t gui_msgboxP(GUI_t *gui, uint_farptr_t msgP, msgbox_type_t type)
 {
+    uint_farptr_t module_offset = GET_MODULE_DATA_PTR_OFFSET();
     (void)gui;
     (void)msgP;
     (void)type;
@@ -159,14 +144,15 @@ int8_t gui_msgboxP(GUI_t *gui, uint32_t msgP, enum msgbox_type_t type)
     len = (len > (sizeof(buf) - 1)) ? (sizeof(buf) - 1) : len;
     for (size_t i = 0; i < len; i++)
     {
-        buf[i] = pgm_read_byte_far(msgP + i);
+        buf[i] = pgm_read_byte_far(msgP + i + module_offset);
     }
     return gui_msgbox(gui, buf, type);
 }
 
 file_descriptor_t gui_choose_file(GUI_t *gui, FileSystem_t *fs, const char *_dir)
 {
-    return -1;
+    // return -1;
+    uint_farptr_t module_offset = GET_MODULE_DATA_PTR_OFFSET();
     (void)gui;
     (void)fs;
     FileInfo_t info;
@@ -189,7 +175,7 @@ file_descriptor_t gui_choose_file(GUI_t *gui, FileSystem_t *fs, const char *_dir
     {
         PORTB |= 0x80;
         int8_t line_no = 0;
-        uint16_t colors[] = {0x457f, 0x0357, 0x1af2, 0x4438};
+        static const uint16_t colors[] PROGMEM = {0x457f, 0x0357, 0x1af2, 0x4438};
         if (selected)
         {
             // get FileInfo of selected item
@@ -248,7 +234,9 @@ file_descriptor_t gui_choose_file(GUI_t *gui, FileSystem_t *fs, const char *_dir
             display_ycoord_t y = 40 + ln * line_spacing;
             display_ycoord_t ys = y - line_spacing / 4;
             display_ycoord_t ye = y + (line_spacing*3 + 1) / 4;
-            MODULE_CALL_THIS(gfx, fill, gui->gfx, colors[(ln+line_start) % (sizeof(colors)/sizeof(colors[0]))]);
+            uint8_t color_id = (ln + line_start) % (sizeof(colors)/sizeof(colors[0]));
+            uint16_t color = pgm_read_word_far(pgm_get_far_address(colors) + color_id * sizeof(uint16_t) + module_offset);
+            MODULE_CALL_THIS(gfx, fill, gui->gfx, color);
             MODULE_CALL_THIS(gfx, rectangle, gui->gfx, (display_region_t){10, ys, 309, ye});
             y += 15;
         }
@@ -274,12 +262,14 @@ file_descriptor_t gui_choose_file(GUI_t *gui, FileSystem_t *fs, const char *_dir
             strncpy(name, info.name, sizeof(name));
             if (info.type == FI_TYPE_DIR)
             {
-                strncat(name, "/", sizeof(name) - strlen(name) - 1);
+                char slash[2] = {'/', '\0'};
+                strncat(name, slash, sizeof(name) - strlen(name) - 1);
             }
             MODULE_CALL_THIS(gfx, text, gui->gfx, ((display_region_t){40, y, 0, y}), name);
             if (line_no == selection)
             {
-                MODULE_CALL_THIS(gfx, text, gui->gfx, ((display_region_t){20, y, 0, y}), ">");
+                char sel[2] = {'>', '\0'};
+                MODULE_CALL_THIS(gfx, text, gui->gfx, ((display_region_t){20, y, 0, y}), sel);
             }
             line_no++;
         }
@@ -352,3 +342,6 @@ end:
     MODULE_CALL_THIS(fs, close, fs, dirfd);
     return -1;
 }
+
+
+REGISTER_MODULE(gui, GUI_MODULE_ID, GUI_FUNCTION_EXPORTS, GUI_API_VER);

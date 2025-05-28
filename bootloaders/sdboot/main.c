@@ -9,10 +9,9 @@
 #include <avr/pgmspace.h>
 #include <avr/wdt.h>
 #include <avr/interrupt.h>
-#include <avr/boot.h>
+#include <avr/power.h>
 
 #include "main.h"
-#include "gui.h"
 
 #include "module/imports.h"
 #include "font/font5x7.h"
@@ -23,6 +22,7 @@
 #include "boot/boot.h"
 #include "buttons/buttons.h"
 #include "buttons.h"
+#include "gui/gui.h"
 
 
 
@@ -30,6 +30,9 @@ void __attribute__((noreturn)) app_reboot() {
   // reboot using watchdog
 #if 1
   wdt_enable(WDTO_250MS);
+  // clear reset flags
+  MCUSR = 0;
+  memset((void*)0x0100, 0, RAMEND - 0x0100);
   while(1);
 #else
   // reboot using reset
@@ -45,10 +48,8 @@ void __attribute__((noreturn)) bl_reboot() {
 }
 
 void __attribute__((noreturn)) error() {
-  // gui_msgboxP(&gui,PSTR("Please eject card"), MSGBOX_OK);
-  // while(sd_fns.detected()) wdt_reset();
-  // reboot bootloader?
   bl_reboot();
+  __builtin_unreachable();
 }
 
 void __attribute__((noreturn)) boot_from_file(const char *filename, uint32_t load_addr) {
@@ -66,32 +67,68 @@ void __attribute__((noreturn)) boot_from_file(const char *filename, uint32_t loa
 }
 
 int8_t partitions_init(BlockDev *root_bd, BlockDev *partition_bd) {
-
-
   uint8_t buf[512];
   blockdev_read_sector(root_bd, 0, buf);
   uint16_t magic = *((uint16_t*)&buf[510]);
-  // gui_msgboxP(&gui,PSTR("Reading MBR"), MSGBOX_OK);
   if (magic != 0xAA55) {
-    // gui_msgboxP(&gui,PSTR("Error reading MBR"), MSGBOX_OK);
-    goto err;
+    return -1;
   }
   uint32_t start_sector = *((uint32_t*)(buf + 0x1BE + 8));
   uint32_t sector_count = *((uint32_t*)(buf + 0x1BE + 12));
   if (blockdev_partition(root_bd, partition_bd, start_sector, sector_count) != 0) {
     // error partitioning blockdev
-    // gui_msgboxP(&gui,PSTR("Error partitioning"), MSGBOX_OK);
-    goto err;
+    return -2;
   }
   blockdev_read_sector(partition_bd, 0, buf);
   magic = *((uint16_t*)&buf[510]);
   if (magic != 0xAA55) {
-    // gui_msgboxP(&gui,PSTR("Error reading MBR"), MSGBOX_OK);
-    goto err;
+    return -3;
   }
   return 0;
-err:
-  return -1;
+}
+
+typedef struct{
+  sd_fns_t *sd_fns;
+  buttons_fns_t *buttons_fns;
+  gui_fns_t *gui_fns;
+  gfx_fns_t *gfx_fns;
+  font5x7_fns_t *font_fns;
+  boot_fns_t *boot_fns;
+  fat_fns_t *fat_fns;
+}sdboot_modules_t;
+
+void populate_modules(sdboot_modules_t *modules) {
+  if (modules->sd_fns) MODULE_IMPORT_FUNCTIONS_RUNTIME(sd, SD_MODULE_ID, SD_FUNCTION_EXPORTS, modules->sd_fns);
+  if (modules->buttons_fns) MODULE_IMPORT_FUNCTIONS_RUNTIME(buttons, BUTTONS_MODULE_ID, BUTTONS_FUNCTION_EXPORTS, modules->buttons_fns);
+  if (modules->gui_fns) MODULE_IMPORT_FUNCTIONS_RUNTIME(gui, GUI_MODULE_ID, GUI_FUNCTION_EXPORTS, modules->gui_fns);
+  if (modules->gfx_fns) MODULE_IMPORT_FUNCTIONS_RUNTIME(gfx, GFX_MODULE_ID, GFX_FUNCTION_EXPORTS, modules->gfx_fns);
+  if (modules->font_fns) MODULE_IMPORT_FUNCTIONS_RUNTIME(font5x7, FONT5X7_MODULE_ID, FONT5X7_FUNCTION_EXPORTS, modules->font_fns);
+  if (modules->boot_fns) MODULE_IMPORT_FUNCTIONS_RUNTIME(boot, BOOT_MODULE_ID, BOOT_FUNCTION_EXPORTS, modules->boot_fns);
+  if (modules->fat_fns) MODULE_IMPORT_FUNCTIONS_RUNTIME(fat, FAT_MODULE_ID, FAT_FUNCTION_EXPORTS, modules->fat_fns);
+
+}
+
+
+void flash_program_filedescriptor(FileSystem_t *fs, file_descriptor_t fd, uint_farptr_t addr) {
+  
+  boot_fns_t boot_fns;
+  MODULE_IMPORT_FUNCTIONS_RUNTIME(boot, BOOT_MODULE_ID, BOOT_FUNCTION_EXPORTS, &boot_fns);
+
+  uint32_t page_size = MODULE_CALL_FNS(boot, get_page_size, &boot_fns);
+  uint8_t *page_buf = alloca(page_size);
+  fstatus_t ret;
+  while(1) {
+    ret = MODULE_CALL_THIS(fs, read, fs, fd, (char*)page_buf, page_size);
+    MODULE_CALL_FNS(boot, flash_erase, &boot_fns, addr);
+    MODULE_CALL_FNS(boot, flash_program, &boot_fns, addr, page_buf);
+    addr += page_size;
+    if (ret < (int)page_size) {
+      break;
+    }
+    if (addr >= 0x1e000UL) {
+      break;
+    }
+  }
 }
 
 void __attribute__((noreturn)) sd_boot(gfx_t *gfx) {
@@ -110,15 +147,20 @@ void __attribute__((noreturn)) sd_boot(gfx_t *gfx) {
   MODULE_IMPORT_FUNCTIONS_RUNTIME(buttons, BUTTONS_MODULE_ID, BUTTONS_FUNCTION_EXPORTS, &buttons_fns);
 
   MODULE_CALL_FNS(sd, preinit, &sd_fns);
+
+  gui_fns_t gui_fns;
+  MODULE_IMPORT_FUNCTIONS_RUNTIME(gui, GUI_MODULE_ID, GUI_FUNCTION_EXPORTS, &gui_fns);
+
   GUI_t gui = {
+    .fns = &gui_fns,
     .gfx = gfx,
     .buttons_fns = &buttons_fns,
   };
 
-  gui_init(&gui);
+  MODULE_CALL_THIS(gui, init, &gui);
 
   while(!sd_fns.sd_detected()) {
-    gui_msgbox(&gui,"Insert card", MSGBOX_OK);
+    MODULE_CALL_THIS(gui, msgbox, &gui,"Insert card", MSGBOX_OK);
     PINB = 0x80;
     // wait for card to be inserted
     _delay_ms(100);
@@ -173,32 +215,13 @@ void __attribute__((noreturn)) sd_boot(gfx_t *gfx) {
       goto end;
     }
 
-    file_descriptor_t fd = gui_choose_file(&gui, &fs.fs, "/");
+    file_descriptor_t fd = MODULE_CALL_THIS(gui, choose_file, &gui, &fs.fs, "/");
     // file_descriptor_t fd = gui_choose_file(&gui, &fs.fs, "/lafortuna/apps/");
-    gui_msgbox(&gui,"Boot from file", MSGBOX_OK);
+    MODULE_CALL_THIS(gui, msgbox, &gui,"Boot from file", MSGBOX_OK);
     PINB = 0x80;
 
-    boot_fns_t boot_fns;
-    MODULE_IMPORT_FUNCTIONS_RUNTIME(boot, BOOT_MODULE_ID, BOOT_FUNCTION_EXPORTS, &boot_fns);
+    flash_program_filedescriptor(&fs.fs, fd, 0x0000UL);
 
-    PINB = 0x80;
-
-    uint32_t page_size = MODULE_CALL_FNS(boot, get_page_size, &boot_fns);
-    uint8_t *page_buf = alloca(page_size);
-    uint32_t addr = 0;
-    while(1) {
-      ret = MODULE_CALL_THIS(fs, read, &fs.fs, fd, (char*)page_buf, page_size);
-      MODULE_CALL_FNS(boot, flash_erase, &boot_fns, addr);
-      MODULE_CALL_FNS(boot, flash_program, &boot_fns, addr, page_buf);
-      addr += page_size;
-      if (ret < (int)page_size) {
-        break;
-      }
-      if (addr > 0x10000) {
-        break;
-      }
-      // break;
-    }
     for (int i = 0;i < 4; i++){
       _delay_ms(200);
       PORTB |= 0x80;
@@ -213,12 +236,13 @@ void __attribute__((noreturn)) sd_boot(gfx_t *gfx) {
 
 
 end:
-  gui_msgboxP(&gui, msgp, MSGBOX_OK);
+  MODULE_CALL_THIS(gui, msgboxP, &gui, msgp, MSGBOX_OK);
   error();
 while(1);
 }
 
 extern void blink_bits(uint32_t value, uint8_t nbits);
+
 
 static void __attribute__((noreturn)) run_interactive() {
   lcd_fns_t lcd_fns;
@@ -304,6 +328,24 @@ static void __attribute__((noreturn)) run_interactive() {
   func(&gfx);
 }
 
+void bootstrap() {
+  // check if we have all required modules.
+  // if not, reinstall them all!
+
+  // we already should have FAT/SD/BOOT modules included.
+  module_id_t modules[] = {
+    LCD_MODULE_ID,
+    GFX_MODULE_ID,
+    FONT5X7_MODULE_ID,
+    BUTTONS_MODULE_ID,
+  };
+  // for (uint8_t i = 0; i < sizeof(modules) / sizeof(module_id_t); i++) {
+  //   if (MODULE_IS_MISSING(modules[i])) {
+  //     MODULE_INSTALL(modules[i]);
+  //   }
+  // }
+}
+
 int main() {
   // disable watchdog
   // check if extreset
@@ -311,6 +353,7 @@ int main() {
     MCUSR = ~_BV(WDRF); // clear watchdog reset flag
     wdt_disable();
     asm("jmp 0x0000");
+    __builtin_unreachable();
   }
   wdt_disable();
 
@@ -319,12 +362,13 @@ int main() {
   MCUCR = _BV(IVSEL); // set bootloader vector
 
   // // Set clock prescaler to 1
-  CLKPR = 0x80; // Enable clock change
-  CLKPR = 0x00; // Set clock prescaler to 1
+  clock_prescale_set(clock_div_1);
   RAMPZ = 1;
 
   DDRB = 0x80;
   PORTB |= 0x80;
+
+  bootstrap();
 
   run_interactive();
   __builtin_unreachable();

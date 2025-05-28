@@ -6,9 +6,9 @@ add_executable(sdboot)
 target_sources(sdboot
     PRIVATE
         main.c
-        encoder.c
-        buttons.c
-        gui.c
+        # encoder.c
+        # buttons.c
+        # gui.c
 )
 
 target_link_modules(sdboot
@@ -19,6 +19,7 @@ target_link_modules(sdboot
         gfx
         font5x7
         buttons
+        gui
 )
 target_link_libraries(sdboot
     PRIVATE
@@ -27,6 +28,7 @@ target_link_libraries(sdboot
         display
         blockdev
         font
+        # gui
 )
 
 target_compile_options(sdboot

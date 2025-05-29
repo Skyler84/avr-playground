@@ -1,3 +1,7 @@
+if (NOT "${BOARD}" STREQUAL "lafortuna")
+    return()
+endif()
+
 add_module(buttons)
 target_sources(buttons
     PRIVATE

@@ -1,3 +1,5 @@
+#!/bin/sh
+
 offenders="$(avr-objdump -d $1 | grep -E '[^ir](call|jmp)')"
 if [[ -z "$offenders" ]]; then
     echo "No offenders found in $1"

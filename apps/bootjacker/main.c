@@ -247,7 +247,7 @@ void setup() {
   MODULE_CALL_THIS(display, init, &lcd.display);
   MODULE_CALL_THIS(gfx, init, &gfx, &lcd.display);
   MODULE_CALL_THIS(lcd, set_orientation, &lcd, West);
-
+  
   MODULE_CALL_THIS(gfx, fill, &gfx, BLACK);
   MODULE_CALL_THIS(gfx, nostroke, &gfx);
   MODULE_CALL_THIS(gfx, rectangle, &gfx, (display_region_t){0, 0, 320, 240});

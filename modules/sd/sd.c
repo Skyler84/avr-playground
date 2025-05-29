@@ -37,22 +37,31 @@
 #define SPI_DDR DDRB
 #define SPI_PIN PINB
 
-
+#if 0
 #define spi_tx_rx_byte(byte) ({\
   SPDR = (uint8_t)byte;\
   while(!(SPSR & (1 << SPIF)));\
   SPDR;\
 })
+#else
+static
+__attribute__((noinline))
+uint8_t spi_tx_rx_byte(uint8_t byte) {
+  SPDR = byte; // send byte
+  while (!(SPSR & (1 << SPIF))); // wait for transmission to complete
+  return SPDR; // return received byte
+}
+#endif
 
 static 
 __attribute__((noinline))
 uint8_t sdcard_calc_crc(uint8_t cmd, uint32_t args) {
   // calculate crc
-  uint64_t data = indirect_call(__ashldi3)(((uint64_t)cmd|0x40), 40) | indirect_call(__ashldi3)(args, 8);
+  uint64_t data = __ashldi3(((uint64_t)cmd|0x40), 40) | __ashldi3(args, 8);
   for (int i = 40; i > 0; i--) {
-    uint64_t val = indirect_call(__lshrdi3)(data, i)&0xff;
+    uint64_t val = __lshrdi3(data, i)&0xff;
     if ((uint8_t)val & 0x80) {
-      data ^= indirect_call(__ashldi3)(((uint64_t)0x89), i);
+      data ^= __ashldi3(((uint64_t)0x89), i);
     }
   }
   return data;
@@ -73,7 +82,7 @@ static void sdcard_send_command(uint8_t cmd, uint32_t args, uint8_t crc) {
 
 static uint8_t sdcard_read_status() {
   // read status
-  uint8_t status = 0xFF;
+  uint8_t status;
   for (int i = 0; i < 20; i++) {
     status = spi_tx_rx_byte(0xFF);
     if (status < 0x80) {
@@ -85,10 +94,10 @@ static uint8_t sdcard_read_status() {
 
 static void sdcard_command(uint8_t cmd, uint32_t args, uint8_t *buf, uint8_t nbytes) {
   // send command
-  spi_tx_rx_byte(0xFF); // send 8 clock pulses
+  // spi_tx_rx_byte(0xFF); // send 8 clock pulses
   CS_PORT &= ~_BV(CS_BIT); // CS low
-  indirect_call(sdcard_send_command)(cmd, args, indirect_call(sdcard_calc_crc)(cmd, args));
-  buf[0] = indirect_call(sdcard_read_status)(); // read status
+  sdcard_send_command(cmd, args, sdcard_calc_crc(cmd, args));
+  buf[0] = sdcard_read_status(); // read status
   if (buf[0] & 0x80) {
     goto err;
   }
@@ -137,12 +146,12 @@ uint8_t sd_initialise()
     spi_tx_rx_byte(0xFF); // send 8 clock pulses
   }
   // send cmd0 command
-  indirect_call(sdcard_command)(0x00, 0x00000000, resp_buf, 1);
+  sdcard_command(0x00, 0x00000000, resp_buf, 1);
   if (resp_buf[0] != 0x01) {
     return resp_buf[1];
   }
 
-  indirect_call(sdcard_command)(8, 0x000001AA, resp_buf, 5);
+  sdcard_command(8, 0x000001AA, resp_buf, 5);
 
   if (
       resp_buf[1] != 0x00 
@@ -152,17 +161,17 @@ uint8_t sd_initialise()
     return 3;
   }
   
-  indirect_call(sdcard_command)(58, 0x00000000, resp_buf, 5);
+  sdcard_command(58, 0x00000000, resp_buf, 5);
   // check if voltage supported?
 
   do {
     // cmd41
-    indirect_call(sdcard_command)(1, 0x40000000, resp_buf, 1);
+    sdcard_command(1, 0x40000000, resp_buf, 1);
     _delay_ms(50);
   } while(resp_buf[0] != 0x00);
 
   // cmd58
-  indirect_call(sdcard_command)(50, 0x00000000, resp_buf, 5);
+  sdcard_command(50, 0x00000000, resp_buf, 5);
   _delay_ms(50);
 
   return 0;
@@ -182,7 +191,7 @@ uint8_t sd_detected()
 uint8_t sd_rdblock(void *self, uint32_t block, uint8_t *buf) {
   (void)self;
   // send cmd17 with args block
-  spi_tx_rx_byte(0xFF); // send 8 clock pulses
+  // spi_tx_rx_byte(0xFF); // send 8 clock pulses
   CS_PORT &= ~_BV(CS_BIT); // CS low
   sdcard_send_command(17, block, 0);
   // wait for response

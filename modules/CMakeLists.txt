@@ -2,23 +2,23 @@ function(target_link_modules target)
     set (TARGET ${ARGV0})
     set (MODE "PUBLIC")
     foreach(module ${ARGV})
-        if (module STREQUAL "PRIVATE")
+        if ("${module}" STREQUAL "PRIVATE")
             set (MODE "PRIVATE")
             continue()
         endif()
-        if (module STREQUAL "PUBLIC")
+        if ("${module}" STREQUAL "PUBLIC")
             set (MODE "PUBLIC")
             continue()
         endif()
-        if (module STREQUAL "INTERFACE")
+        if ("${module}" STREQUAL "INTERFACE")
             set (MODE "INTERFACE")
             continue()
         endif()
-        if (module STREQUAL "${target}")
+        if ("${module}" STREQUAL "${target}")
             continue()
         endif()
-        if (TARGET ${module})
-            target_link_libraries(${TARGET} ${MODE} mod_interface_${module})
+        if (TARGET "${module}")
+            target_link_libraries(${TARGET} ${MODE} "mod_interface_${module}")
             get_target_property(link_modules ${module} LINK_MODULES)
             message(STATUS "Linking target ${TARGET} with module ${module} link_modules: ${link_modules}")
             if ("${link_modules}" STREQUAL "link_modules-NOTFOUND")
@@ -36,8 +36,9 @@ function(target_link_modules target)
             message (FATAL_ERROR "Module ${module} not found")
         endif()
         # if we're linking a module to another module, link to the mod_interface
-        if (TARGET "mod_${TARGET}" AND NOT "${module}" STREQUAL "module")
-            target_link_libraries(mod_interface_${TARGET} INTERFACE mod_interface_${module})
+        if (TARGET "mod_${TARGET}")
+            target_link_libraries(mod_${TARGET} INTERFACE mod_interface_${module})
+            target_link_libraries(mod_${TARGET} INTERFACE mod_interface_${module})
         endif()
         
     endforeach()
@@ -69,6 +70,7 @@ function(add_module name)
         TARGET mod_${name}
         POST_BUILD
         COMMAND avr-size mod_${name}
+        COMMAND ${CMAKE_SOURCE_DIR}/modules/check_module.sh mod_${name}
     )
 
     add_custom_target(mod_${name}.hex ALL
@@ -90,7 +92,6 @@ function(add_module name)
         INTERFACE
             -U${name}_MODTYPE
             -D${name}_MODTYPE=MODULE
-            # -UMODULE_AS_STATIC_LIB
     )
     target_compile_options(mod_${name}
         PRIVATE
@@ -138,8 +139,8 @@ function(add_module name)
             "$<TARGET_PROPERTY:${name},LINK_OPTIONS>"
             -B ${CMAKE_SOURCE_DIR}/modules/module/device-specs
     )
-    if (NOT ${name} STREQUAL "module")
-        # target_link_libraries(${name} PRIVATE mod_interface_module)
+    if (NOT "${name}" STREQUAL "module")
+        target_link_libraries(${name} PRIVATE mod_interface_module)
     endif()
 
     set_target_properties(

@@ -1,6 +1,8 @@
 #pragma once
 
 #include "module/module.h"
+#include "module/pic.h"
+#include <avr/pgmspace.h>
 
 #define IMPORT_FN(modname, name, ...)\
   modname##_fns.name = (modname##_##name##_fn_t)module_fn_lookup(modname##_##name##_fn_id, module);\
@@ -28,23 +30,30 @@
 #define MODULE_IMPORT_FUNCTION_STATIC(modname, name, returns, ...) \
 
 
-#define MODULE_IMPORT_FUNCTIONS_RUNTIME_STATIC(modname, id, exports, fns) \
+#define   MODULE_IMPORT_FUNCTIONS_RUNTIME_STATIC(modname, id, exports, fns, ...) \
 {\
   *(fns) = (modname##_fns_t){\
     exports(modname, DEFINE_IMPORTED_FN_STATIC)\
   };\
 }
-#define MODULE_IMPORT_FUNCTIONS_RUNTIME_MODULE(modname, id, exports, fns) \
+
+#define FNS_MODULE_STATIC(x) NULL
+#define FNS_MODULE_MODULE(x) x
+
+#define MODULE_IMPORT_FUNCTIONS_RUNTIME_MODULE(modname, id, exports, fns, ...) \
 {\
-  uint16_t modname##_fn_ids[] = {\
+  static const uint16_t modname##_fn_ids_p[] PROGMEM = {\
     exports(modname, MODULE_ENUM_FN_ID)\
     0\
   };\
-  module_init_fns((fns)->fptr_arr, id, modname##_fn_ids);\
+  uint16_t modname##_fn_ids[sizeof(modname##_fn_ids_p)/sizeof(uint16_t)];\
+  uint8_t i = 0;\
+  while((modname##_fn_ids[i++] = pgm_read_word_far(pgm_get_far_address(modname##_fn_ids_p) + i*2 + GET_MODULE_DATA_PTR_OFFSET())));\
+  MODULE_CALL_FNS(module, init_fns, XCAT(FNS_MODULE_,module_MODTYPE)(__VA_ARGS__), (fns)->fptr_arr, id, modname##_fn_ids);\
 }
 
-#define MODULE_IMPORT_FUNCTIONS_RUNTIME(modname, id, exports, fns)\
-  XCAT(MODULE_IMPORT_FUNCTIONS_RUNTIME_, XCAT(modname,_MODTYPE))(modname, id, exports, fns)
+#define MODULE_IMPORT_FUNCTIONS_RUNTIME(modname, ...)\
+  XCAT(MODULE_IMPORT_FUNCTIONS_RUNTIME_, XCAT(modname,_MODTYPE))(modname, __VA_ARGS__)
 
 /*
  #define MODULE_TRAMPOLINE_FN(modname, name, returns, ...) \

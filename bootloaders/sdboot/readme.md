@@ -2,6 +2,18 @@
 
 SDBoot allows interactively programming flash using binaries stored on a Micro-SD card.
 
+## How it works
+
+SDBoot is broken into two main components
+
+### The Stub
+
+the SDBoot stub is essentially a 1st stage bootloader. It bootstraps the main bootloader application. It has to contain SD card driver, FAT driver, dynamic module loader and boot programming functions. This enables it to find and program the second stage bootloader.
+
+### The interactive portion
+
+The SDBoot interactive 
+
 ## Functions
 
 (WIP) SDBoot is able to bootstrap itself. The core bootloader (8KB) contains a minimal SD and FAT driver, flash programming functions, and is able to load the remaining portions of itself (modules) into application flash.

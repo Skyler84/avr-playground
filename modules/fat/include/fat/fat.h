@@ -135,10 +135,6 @@ extern FileInfo_t dir_entry;
 #define FAT_FUNCTION_EXPORTS(modname, o) \
   FS_FUNCTION_INTERFACE(modname, o)\
   o(modname, init          , void              , FAT_FileSystem_t*, BlockDev *bd)                                 \
-  o(modname, opendir       , file_descriptor_t , FAT_FileSystem_t*, const char*)                \
-  o(modname, opendirat     , file_descriptor_t , FAT_FileSystem_t*, file_descriptor_t, const char*)                \
-  o(modname, closedir      , void              , FAT_FileSystem_t*, file_descriptor_t)                \
-  o(modname, readdir       , fstatus_t         , FAT_FileSystem_t*, file_descriptor_t, struct FileInfo*)                \
 
 
 #define FAT_API_VER 1
@@ -159,5 +155,6 @@ struct FAT_FileSystem {
   uint32_t sectors_per_cluster;
   uint32_t root_entries;
   uint32_t root_cluster;
+  uint32_t debug;
   FAT_Handle_t handles[8];
 };

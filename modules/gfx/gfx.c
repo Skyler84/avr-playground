@@ -6,13 +6,18 @@
 
 uint32_t multiply(uint16_t a, uint16_t b)
 {
-    asm volatile(
-        "movw r26, %A0\n"
-        "movw r18, %A1\n"
-        "ijmp\n"
-        :: "r" (a), "r" (b), "z" (indirect_call(__umulhisi3))
-    );
-    __builtin_unreachable();
+  uint32_t out;
+  asm volatile(
+      "movw r26, %1\n"
+      "movw r18, %2\n"
+      "icall\n"
+      "movw %A0, r22\n"
+      "movw %C0, r24\n"
+      : "=r" (out)
+      : "r" (a), "r" (b), "z" (indirect_call(__umulhisi3))
+      : "r26", "r27", "r18", "r19", "r22", "r23", "r24", "r25"
+  );
+  return out;
 }
 
 
@@ -182,14 +187,14 @@ __attribute__((optimize("O3"))) void gfx_rectangle(gfx_t *gfx, gfx_region_t r)
     if (gfx->fill)
     {
         MODULE_CALL_THIS(display, region_set, gfx->display, r);
-        MODULE_CALL_THIS(display, fill, gfx->display, gfx->fillColour, indirect_call(multiply)((uint16_t)(r.x2 - r.x1 + 1), (uint16_t)(r.y2 - r.y1 + 1)));
+        MODULE_CALL_THIS(display, fill, gfx->display, gfx->fillColour, (uint32_t)(r.x2 - r.x1 + 1) * (uint32_t)(r.y2 - r.y1 + 1));
     }
     if (gfx->stroke)
     {
-        indirect_call(gfx_line)(gfx, (gfx_coord_t){r.x1, r.y1}, (gfx_coord_t){r.x2, r.y1});
-        indirect_call(gfx_line)(gfx, (gfx_coord_t){r.x2, r.y1}, (gfx_coord_t){r.x2, r.y2});
-        indirect_call(gfx_line)(gfx, (gfx_coord_t){r.x2, r.y2}, (gfx_coord_t){r.x1, r.y2});
-        indirect_call(gfx_line)(gfx, (gfx_coord_t){r.x1, r.y2}, (gfx_coord_t){r.x1, r.y1});
+        gfx_line(gfx, (gfx_coord_t){r.x1, r.y1}, (gfx_coord_t){r.x2, r.y1});
+        gfx_line(gfx, (gfx_coord_t){r.x2, r.y1}, (gfx_coord_t){r.x2, r.y2});
+        gfx_line(gfx, (gfx_coord_t){r.x2, r.y2}, (gfx_coord_t){r.x1, r.y2});
+        gfx_line(gfx, (gfx_coord_t){r.x1, r.y2}, (gfx_coord_t){r.x1, r.y1});
     }
 }
 
@@ -228,8 +233,8 @@ void gfx_triangle(gfx_t *gfx, gfx_coord_t a, gfx_coord_t b, gfx_coord_t c)
     {
         if (y < b.y)
         {
-            int16_t x1 = a.x + indirect_call(divide)(indirect_call(multiply)(dx1, (y - a.y)), dy1);
-            int16_t x2 = a.x + indirect_call(divide)(indirect_call(multiply)(dx2, (y - a.y)), dy2);
+            int16_t x1 = a.x + (dx1 * (y - a.y)) / dy1;
+            int16_t x2 = a.x + (dx2 * (y - a.y)) / dy2;
             if (x1 > x2)
             {
                 int16_t t = x1;

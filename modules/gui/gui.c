@@ -162,11 +162,13 @@ file_descriptor_t gui_choose_file(GUI_t *gui, FileSystem_t *fs, const char *_dir
     int8_t selection = 0;
     uint8_t line_start = 0;
     MODULE_CALL_THIS(gfx, textSize, gui->gfx, 144/num_lines);
+    char slash[2] = {'/', '\0'};
     if (_dir == NULL)
     {
-        _dir = "/";
+        _dir = slash;
     }
-    char dir[256];;
+    char dir[256];
+    char buf[64];
     strncpy(dir, _dir, sizeof(dir));
     file_descriptor_t dirfd;
     dirfd = MODULE_CALL_THIS(fs, open, fs, dir, O_RDONLY | O_DIRECTORY);
@@ -186,15 +188,10 @@ file_descriptor_t gui_choose_file(GUI_t *gui, FileSystem_t *fs, const char *_dir
             }
             if (ret != 1)
             {
-                static const char msg[] = "Error reading directory";
-                uint_farptr_t msgP = pgm_get_far_address(msg);
+                static const char msg[] PROGMEM = "Error reading directory";
+                uint_farptr_t msgP = pgm_get_far_address(msg) + GET_MODULE_DATA_PTR_OFFSET();
                 char buf[sizeof(msg)];
-                char c;
-                int i = 0;
-                while((c = pgm_read_byte_far(msgP+i)))
-                {
-                    buf[i++] = c;
-                }
+                strcpy_PF(buf, msgP);
                 gui_msgbox(gui, buf, MSGBOX_OK);
                 goto end;
             }
@@ -206,12 +203,33 @@ file_descriptor_t gui_choose_file(GUI_t *gui, FileSystem_t *fs, const char *_dir
             }
             else if (info.type == 2)
             {
+                char hex(uint8_t c) {
+                if (c < 10) return '0' + c;
+                return 'A' + c - 10;
+                }
+              
                 // directory
+                char buf[32];
+                strcpy_PF(buf, MOD_PFSTR("/lafortuna/"));
                 file_descriptor_t newdirfd = MODULE_CALL_THIS(fs, openat, fs, dirfd, info.name, O_RDONLY  | O_DIRECTORY);
-                if (newdirfd < 0 || newdirfd == dirfd)
+                if (newdirfd < 0)
                 {
-                    char msg[] = "Error opening directory";
-                    gui_msgbox(gui, msg, MSGBOX_OK);
+                    strcpy_PF(buf, MOD_PFSTR("Error opening directory "));
+                    uint8_t i = 0;
+                    while(buf[i])i++;
+                    buf[i++] = hex((((uint8_t)info.inode)>>4)&0x0f);
+                    buf[i++] = hex((((uint8_t)info.inode)>>0)&0x0F);
+                    buf[i++] = ' ';
+                    char *s = info.name;
+                    while((buf[i++] = *s++));
+                    // buf[i++] = 0;
+              
+                    gui_msgbox(gui, buf, MSGBOX_OK);
+                    goto end;
+                }
+                if (newdirfd == dirfd) {
+                    strcpy_PF(buf, MOD_PFSTR("Invalid file descriptor"));
+                    gui_msgbox(gui, buf, MSGBOX_OK);
                     goto end;
                 }
                 MODULE_CALL_THIS(fs, close, fs, dirfd);

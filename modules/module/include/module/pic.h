@@ -3,6 +3,18 @@
 
 #include <stdint.h>
 
+
+#define MOD_PFSTR(s) ({ \
+    static const char _pstring[] PROGMEM = s; \
+    pgm_get_far_address(_pstring) + GET_MODULE_DATA_PTR_OFFSET(); \
+    })
+
+#define MOD_PFTYPE(type, ...) \
+    ({ \
+        static const type _ptype PROGMEM = __VA_ARGS__; \
+        pgm_get_far_address(_ptype) + GET_MODULE_DATA_PTR_OFFSET(); \
+    })
+
 #ifndef MODULE_AS_STATIC_LIB
 
 #define ASM_POP_RETURN_ADDR(id) \
@@ -18,6 +30,24 @@
 #define MODULE_ADJUST_FN_PTR(ptr) \
     (void*)((uintptr_t)(ptr) + GET_MODULE_FN_PTR_OFFSET())
 
+
+
+
+
+#if 0
+inline static uintptr_t GET_MODULE_FN_PTR_OFFSET() {
+    uintptr_t rel; 
+    asm volatile(  
+    ASM_PUSH_PC_LABEL_ADDR(L_%=)   
+    ASM_POP_RETURN_ADDR(0)        
+    "      subi %A0, pm_lo8(L_%=)\n" 
+    "      sbci %B0, pm_hi8(L_%=)\n" 
+    : "=d" (rel) 
+    ::); 
+    return rel; 
+}
+#else
+
 #define GET_MODULE_FN_PTR_OFFSET() ({\
     uintptr_t rel; \
     asm volatile(  \
@@ -29,24 +59,13 @@
     ::); \
     rel; \
 })
+#endif
 
-
-inline static uint32_t GET_MODULE_DATA_PTR_OFFSET() 
-{
-    return ((uint32_t)GET_MODULE_FN_PTR_OFFSET()) * 2;
-}
+#define GET_MODULE_DATA_PTR_OFFSET() ((uint32_t)GET_MODULE_FN_PTR_OFFSET()) * 2
 
 #else
-
-inline static uintptr_t GET_MODULE_FN_PTR_OFFSET() 
-{
-    return 0;
-}
-inline static uintptr_t GET_MODULE_DATA_PTR_OFFSET() 
-{
-    return 0;
-}
-
+#define GET_MODULE_FN_PTR_OFFSET() 0
+#define GET_MODULE_DATA_PTR_OFFSET() 0
 #endif
 
 #define indirect_call(name) (&name + GET_MODULE_FN_PTR_OFFSET())

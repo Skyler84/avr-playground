@@ -2,23 +2,23 @@ function(target_link_modules target)
     set (TARGET ${ARGV0})
     set (MODE "PUBLIC")
     foreach(module ${ARGV})
-        if (module STREQUAL "PRIVATE")
+        if ("${module}" STREQUAL "PRIVATE")
             set (MODE "PRIVATE")
             continue()
         endif()
-        if (module STREQUAL "PUBLIC")
+        if ("${module}" STREQUAL "PUBLIC")
             set (MODE "PUBLIC")
             continue()
         endif()
-        if (module STREQUAL "INTERFACE")
+        if ("${module}" STREQUAL "INTERFACE")
             set (MODE "INTERFACE")
             continue()
         endif()
-        if (module STREQUAL "${target}")
+        if ("${module}" STREQUAL "${target}")
             continue()
         endif()
-        if (TARGET ${module})
-            target_link_libraries(${TARGET} ${MODE} mod_interface_${module})
+        if (TARGET "${module}")
+            target_link_libraries(${TARGET} ${MODE} "mod_interface_${module}")
             get_target_property(link_modules ${module} LINK_MODULES)
             message(STATUS "Linking target ${TARGET} with module ${module} link_modules: ${link_modules}")
             if ("${link_modules}" STREQUAL "link_modules-NOTFOUND")
@@ -35,8 +35,10 @@ function(target_link_modules target)
         else()
             message (FATAL_ERROR "Module ${module} not found")
         endif()
-        if (TARGET mod_${TARGET} AND NOT ${module} STREQUAL "module")
-            target_link_libraries(mod_interface_${TARGET} INTERFACE mod_interface_${module})
+        # if we're linking a module to another module, link to the mod_interface
+        if (TARGET "mod_${TARGET}")
+            target_link_libraries(mod_${TARGET} INTERFACE mod_interface_${module})
+            target_link_libraries(mod_${TARGET} INTERFACE mod_interface_${module})
         endif()
         
     endforeach()
@@ -48,6 +50,8 @@ function(add_module name)
     target_compile_definitions(${name}
         PUBLIC
             ${name}_MODTYPE=STATIC
+        PRIVATE
+            MODULE_AS_STATIC_LIB
     )
     add_custom_command(
         TARGET ${name}
@@ -66,6 +70,7 @@ function(add_module name)
         TARGET mod_${name}
         POST_BUILD
         COMMAND avr-size mod_${name}
+        COMMAND ${CMAKE_SOURCE_DIR}/modules/check_module.sh mod_${name}
     )
 
     add_custom_target(mod_${name}.hex ALL
@@ -94,6 +99,7 @@ function(add_module name)
             -nostdlib
             -U${name}_MODTYPE
             -D${name}_MODTYPE=MODULE
+            -UMODULE_AS_STATIC_LIB
     )
     target_compile_definitions(mod_interface_${name}
         INTERFACE
@@ -133,11 +139,7 @@ function(add_module name)
             "$<TARGET_PROPERTY:${name},LINK_OPTIONS>"
             -B ${CMAKE_SOURCE_DIR}/modules/module/device-specs
     )
-    # target_link_libraries(mod_${name}
-    #     PRIVATE
-    #         "$<TARGET_PROPERTY:${name},LINK_LIBRARIES>"
-    # )
-    if (NOT ${name} STREQUAL "module")
+    if (NOT "${name}" STREQUAL "module")
         target_link_libraries(${name} PRIVATE mod_interface_module)
     endif()
 
@@ -168,3 +170,5 @@ add_subdirectory(vfs)
 add_subdirectory(fat)
 add_subdirectory(gfx)
 add_subdirectory(boot)
+add_subdirectory(buttons)
+add_subdirectory(gui)

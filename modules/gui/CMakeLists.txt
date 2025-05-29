@@ -1,8 +1,8 @@
 add_module(gui)
 target_sources(gui
   PRIVATE
-  encoder.c
-  buttons.c
+  # encoder.c
+  # buttons.c
   gui.c
 )
 
@@ -16,6 +16,7 @@ target_include_directories(gui
 target_link_modules(gui
   PRIVATE
   gfx
+  buttons
 )
 
 target_link_libraries(gui

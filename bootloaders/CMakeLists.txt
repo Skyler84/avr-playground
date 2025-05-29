@@ -8,6 +8,10 @@ function(make_avr_bootloader target)
         message(FATAL_ERROR "BOOT_MODULE_START_ADDRESS property not set for target ${target}")
     endif()
 
+    target_compile_definitions(${target} PRIVATE
+        MODULE_START_ADDRESS=${boot_module_start}
+    )
+
     set(app ${target}.boot)
     add_executable(${app})
     add_dependencies(${app} ${target})
@@ -17,6 +21,8 @@ function(make_avr_bootloader target)
         LINK_MODULES_BINS $<TARGET_PROPERTY:${target},LINK_MODULES_BINS>
         INCLUDE_DIRECTORIES $<TARGET_PROPERTY:${target},INCLUDE_DIRECTORIES>
         LINK_LIBRARIES $<TARGET_PROPERTY:${target},LINK_LIBRARIES>
+        COMPILE_OPTIONS $<TARGET_PROPERTY:${target},COMPILE_OPTIONS>
+        COMPILE_DEFINITIONS $<TARGET_PROPERTY:${target},COMPILE_DEFINITIONS>
     )
     target_link_options(${app} PRIVATE
         -Wl,--section-start=.text=${boot_start}
@@ -90,6 +96,7 @@ function(make_avr_bootloader target)
         # ${CMAKE_CURRENT_BINARY_DIR}/${app}.hex
         ${CMAKE_CURRENT_BINARY_DIR}/${app}.bin
         # ${CMAKE_CURRENT_BINARY_DIR}/${app}.all.hex
+        ${CMAKE_CURRENT_BINARY_DIR}/${app}.mods.bin
         ${CMAKE_CURRENT_BINARY_DIR}/${app}.all.bin
         DESTINATION ${CMAKE_INSTALL_PREFIX}/bootloaders/${target}
     )
